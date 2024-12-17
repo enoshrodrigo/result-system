@@ -13,7 +13,7 @@
   <a href="#"><img src="https://img.shields.io/badge/Framework-Laravel-red?style=flat-square&logo=laravel" alt="Laravel"></a>
   <a href="#"><img src="https://img.shields.io/badge/Frontend-React-blue?style=flat-square&logo=react" alt="React"></a>
   <a href="#"><img src="https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC?style=flat-square&logo=tailwindcss" alt="Tailwind CSS"></a>
-  <a href="#"><img src="https://img.shields.io/badge/License-MIT-yellowgreen?style=flat-square" alt="License"></a>
+  <a href="#"><img src="https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square" alt="License"></a>
 </p>
 
 ---
