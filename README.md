@@ -47,17 +47,11 @@ The **Result Management System** is a robust, scalable solution designed for cam
 
 This system was built to enhance technical expertise in **Laravel**, **React.js**, and **Tailwind CSS**, combining efficient backend development with modern frontend frameworks to deliver a clean, responsive, and scalable system.
 
----
-
-## 🤝 Contributing
-
-Contributions are welcome! If you'd like to contribute, please submit a pull request. Together, we can make this system even better.
-
----
+--- 
 
 ## 🔒 License
 
-This project is open-sourced under the [ Apache License](http://www.apache.org/licenses/LICENSE-2.0).
+This project is under the [ Apache License](http://www.apache.org/licenses/LICENSE-2.0).
 
 ---
 
