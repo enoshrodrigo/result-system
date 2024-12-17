@@ -57,7 +57,7 @@ Contributions are welcome! If you'd like to contribute, please submit a pull req
 
 ## 🔒 License
 
-This project is open-sourced under the [MIT License](https://opensource.org/licenses/MIT).
+This project is open-sourced under the [ Apache License](http://www.apache.org/licenses/LICENSE-2.0).
 
 ---
 
