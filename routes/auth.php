@@ -11,7 +11,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Axios;
-use App\Http\Controllers\CsvUpload;
+use App\Http\Controllers\CSVFile; 
 use App\Http\Controllers\DeleteRequets;
 use Illuminate\Support\Facades\Route;
 
@@ -67,9 +67,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
                 ->name('logout');
-                
-    // Route::get('upload/result',[CsvUpload::class,'uploadcsv'])->name('uploadcsv');
-    Route::post('upload/result',[CsvUpload::class,'uploadcsv'])->name('uploadcsv');
+                 
 
     Route::post('get/short/courses',[Axios::class,'getCourses'])->name('getcourses');
     Route::post('get/levels',[Axios::class,'getLevels'])->name('getlevels');
@@ -91,6 +89,10 @@ Route::middleware('auth')->group(function () {
     Route::post('get/all-subject-status',[Axios::class,'allsubjectsStatus'])->name('allsubjectstatus');
     Route::post('get/updatesubject-status',[Axios::class,'updatesubject'])->name('updatesubject');
     Route::post('delete/subject',[DeleteRequets::class,'deletesubject'])->name('deletesubject');
+
+
+    Route::post('/get/batchcode', [Axios::class, 'checkBatchCode'])->name('checkBatchCode');
+    Route::post('put/result',[CSVFile::class,'uploadjson'])->name('uploadjson');
 
 
 

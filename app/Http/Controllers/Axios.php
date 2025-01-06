@@ -9,8 +9,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Mockery\Expectation;
-use Mockery\Undefined;
+use Mockery\Expectation; 
 
 use function Pest\Laravel\json;
 use function PHPUnit\Framework\throwException;
@@ -324,6 +323,22 @@ public function UndergraduateSubjectstatus(Request $request){
 
   
     
+//check batchcode avaliility
+
+public function checkBatchCode(Request $request){
+
+    $batch_code = $request->input('batch_code');
+  
+    $batch=batchs::where('batch_code',$batch_code)->first();
+    if($batch){
+        return response()->json(['batch_code'=>false]);
+    }else{
+        return response()->json(['batch_code'=>true]);
+    }
+
+
+}
+
 }
 
 

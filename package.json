@@ -25,6 +25,7 @@
     "dependencies": {
         "@inertiajs/inertia-react": "^0.8.1",
         "html2pdf.js": "^0.10.2",
+        "papaparse": "^5.4.1",
         "react-hot-toast": "^2.4.1",
         "react-router-dom": "^6.20.0",
         "react-snowfall": "^2.2.0",
