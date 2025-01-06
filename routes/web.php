@@ -1,10 +1,8 @@
 <?php
 
-use App\Http\Controllers\Axios;
-use App\Http\Controllers\CsvUpload;
+use App\Http\Controllers\Axios; 
 use App\Http\Controllers\DisplayStudent;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\UploadResult;
+use App\Http\Controllers\ProfileController; 
 use App\Http\Controllers\ViewResult;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -29,9 +27,7 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
-Route::get('/add-new/intake', function () {
-    return Inertia::render('AddNewIntake');
-})->name('AddNewIntake');
+ 
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -41,9 +37,13 @@ Route::get('/view/render-result', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('viewAllBatchResult');
 
-Route::get('/add-result', function () {
-    return Inertia::render('AddResult');
-})->middleware(['auth', 'verified'])->name('addResult');
+  
+Route::get('/upload-result', function () {
+    return Inertia::render('UploadResult');
+})->middleware(['auth', 'verified'])->name('upload');
+
+
+
 
 
 Route::get('/add-subject', function () {
@@ -66,19 +66,10 @@ Route::get('/check-result', [ViewResult::class, 'show'])->name('checkresult');
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    // Route::post('/upload/result', [UploadResult::class,'store'])->name('uploadresult');
-    // Route::post('/upload/result',[CsvUpload::class,'uploadcsv'])->name('Auploadcsv');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy'); 
     Route::post('/view/render-result',[Axios::class,'viewAllBatchResult'])->name('viewAllBatchResult');
     Route::get('/view/getStatistics',[Axios::class,'getStatistics'])->name('getStatistics'); 
-    
-
-
-
-
-
-
-
+   
 });
 
 require __DIR__.'/auth.php';

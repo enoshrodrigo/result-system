@@ -25,7 +25,7 @@ export default function Authenticated({ auth, header, children }) {
                                 <NavLink href={route('dashboard')} active={route().current('dashboard')}>
                                     Dashboard
                                 </NavLink>
-                                <NavLink href={route('addResult')} active={route().current('addResult')}>
+                                <NavLink href={route('upload')} active={route().current('upload')}>
                                    Add results
                                 </NavLink>
                                 <NavLink href={route('ViewResult')} active={""}>
@@ -34,11 +34,11 @@ export default function Authenticated({ auth, header, children }) {
                                 {/* <NavLink href={route('dashboard')}   active={""}>
                                     Edit results
                                 </NavLink> */}
-                                <NavLink href={route('AddNewIntake')}   active={route().current('AddNewIntake')}>
+                              {/*   <NavLink href={route('AddNewIntake')}   active={route().current('AddNewIntake')}>
 
                                     Add New intake
                                     
-                                </NavLink>
+                                </NavLink> */}
                                 <NavLink href={route('getsubjects')}   active={route().current('getsubjects')}>
                                     Add Subject
                                 </NavLink>
