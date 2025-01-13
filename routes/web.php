@@ -55,6 +55,14 @@ Route::get('/view-result', function () {
     return Inertia::render('StudentView/ViewNewResult');
 })->name('ViewResult');
 
+
+Route::get('/profilecard', function () {
+    return Inertia::render('StudentView/StudentProfileCard');
+})->name('profilecard');
+
+
+
+
 Route::post('/check-result', [ViewResult::class,'get'])->name('checkresult'); 
 
 Route::get('/check-result', [ViewResult::class, 'show'])->name('checkresult');
