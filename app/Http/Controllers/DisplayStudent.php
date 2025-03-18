@@ -101,6 +101,67 @@ if($short_course_status==null ){
     public function getresult(){
         return Redirect::route('ViewResult');
     }
+
+
+
+
+    public function DisplayAllResult(Request $request){
+        try{ 
+        $batch_code = $request->input('batch');
+        $batch=batchs::where('batch_code',$batch_code)->first(); 
+    // return $batch;
+        $allresults=DB::table('short_course_students') 
+        ->select('short_course_students.*')
+        // ->take(10)
+        ->get();
+        // dd($allresults);
+        // return $allresults;
+           $studentAndSubject=[];
+    foreach($allresults as $key =>$data){
+       $student_id= intval($data->id);
+    
+       $subjects=DB::table('short_course_marks')
+       ->join('assign_short_course_subjects','assign_short_course_subjects.id','=','short_course_marks.assign_short_course_subjects_id') 
+       ->join('subjects','subjects.id','=','assign_short_course_subjects.short_subject_id')
+       ->join('batchs','batchs.id','=','assign_short_course_subjects.course_batch_id')
+     /*   ->where('assign_short_course_subjects.course_batch_id','=',$batch->id) */
+       ->where('short_course_marks.short_course_student_id','=',$student_id)
+        ->select('short_course_marks.grade','subjects.subject_name','subjects.subject_code','batchs.batch_code', 'batchs.batch_name')
+        ->orderBy('short_course_marks.short_course_student_id','asc')
+        ->get();
+    if(count($subjects)<=0){
+         continue;
+    }
+        $array=[
+            
+                      
+                "NIC"=>$data->NIC_PO,
+                "first_name"=>$data->first_name,
+                "subjects"=>$subjects
+    
+            
+        ];
+            
+        
+    
+        array_push($studentAndSubject,$array);
+        
+    
+    }
+        //   return json; 
+
+        return json_decode(json_encode($studentAndSubject),true);
+    
+        
+    
+        }catch(Exception $e){
+        return $e;
+          
+        }
+    
+       
+       
+    } 
 }
  
  
