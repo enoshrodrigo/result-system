@@ -38,11 +38,8 @@ class Axios extends Controller
         // ->select('department_courses.course_name','department_courses.course_code')
         // ->get();
 
-        $allCourse=  DB::table('department_courses')
-        ->join('batchs','department_courses.id','=','batchs.batch_course_id')
-        ->join('assign_short_course_subjects','assign_short_course_subjects.course_batch_id','=','batchs.id')
-        ->select('department_courses.course_name','department_courses.course_code')
-        ->distinct()
+        $allCourse=  DB::table('department_courses') 
+        ->select('department_courses.course_name','department_courses.course_code') 
         ->get();
         return response()->json(["courses"=>$allCourse]);
     }
