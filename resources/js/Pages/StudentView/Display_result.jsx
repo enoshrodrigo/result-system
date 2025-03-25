@@ -99,8 +99,11 @@ export default function Display_result(props) {
               </thead>
               <tbody>
                 {props.result.map((data, index) =>
-                  data.subjects.map((subject, idx) => (
-                    <tr
+                  data.subjects.map((subject, idx) => ( 
+                      /* Render the subjects */
+                      ! (subject.grade === "-" || subject.grade === "" || subject.grade === null || subject.grade === undefined )  
+                       
+                      ? (  <tr
                       key={idx}
                       className="border-b hover:bg-indigo-100"
                       style={{ backgroundColor: "#F1F5F9" }} // Light grayish-blue
@@ -108,6 +111,10 @@ export default function Display_result(props) {
                       <th className="px-6 py-4 font-bold text-black">{subject.subject_name}</th>
                       <td className="px-6 py-4 font-bold text-black">{subject.grade}</td>
                     </tr>
+                      ):""
+
+                  
+                 
                   ))
                 )}
               </tbody>
