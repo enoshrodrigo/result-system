@@ -8,7 +8,7 @@ export default function ResultStatus(props) {
 
     // Calculate the total number of pages
     const totalPages = Math.ceil(props.shortLive?.length / itemsPerPage);
-console.log(props.shortLive);
+ 
     // Get the items to display on the current page
     const currentItems = props.shortLive?.slice(
         (currentPage - 1) * itemsPerPage,

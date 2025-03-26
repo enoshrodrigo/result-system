@@ -15,6 +15,7 @@ export default function Dashboard(props) {
         prev_page_url: null,
     });
     const [statistics, setStatistics] = useState({
+        totalStudents: 0,
         liveCount: 0,
         offlineCount: 0,
         totalCourses: 0,
@@ -105,6 +106,12 @@ export default function Dashboard(props) {
                             <div className="text-gray-900 dark:text-gray-100">
                                 <h3 className="text-lg font-semibold mb-2">Summary</h3>
                                 <div className="flex space-x-4">
+                                    {/* Toootle studnts */}
+                                    <div className="bg-yellow-500 text-white p-4 rounded-lg shadow-md flex flex-col items-center">
+                                        <p className="text-xl font-bold">{statistics.totalStudents}</p>
+                                        <p>Total Students</p>
+                                    </div>
+
                                     <div className="bg-green-500 text-white p-4 rounded-lg shadow-md flex flex-col items-center">
                                         <p className="text-xl font-bold">{statistics.totalCourses}</p>
                                         <p>Total Courses</p>
