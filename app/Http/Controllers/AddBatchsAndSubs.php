@@ -286,4 +286,78 @@ public function verifySubjects(Request $request) {
     }
 }
 
+public function updateSubject(Request $request)
+{
+    // Validate incoming request data
+    $validated = $request->validate([
+        'subject_code' => 'required|string|exists:subjects,subject_code', // Original subject code
+        'subject_name' => 'sometimes|required|string|max:255',
+        'subject_code' => 'sometimes|required|string', // Allow any value here
+        'undergraduate_subject' => 'sometimes|boolean',
+        'original_subject_code' => 'required|string' // Added this for clarity
+    ]);
+    
+    \Log::info('Update subject request: ', $request->all());
+    
+    try {
+        // Find the subject by the original subject_code
+        $subject = Subject::where('subject_code', $validated['original_subject_code'])->first();
+        
+        if (!$subject) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Subject not found'
+            ], 404);
+        }
+
+        // Update only the fields that were provided
+        if (isset($validated['subject_name'])) {
+            $subject->subject_name = $validated['subject_name'];
+        }
+        
+        // Handle subject code update separately
+        // This checks if we're trying to update the subject code itself
+        if (isset($validated['subject_code']) && 
+            $validated['subject_code'] !== $subject->subject_code &&
+            isset($validated['original_subject_code'])) {
+            
+            // Check if the new code already exists in other subjects
+            $existingSubject = Subject::where('subject_code', $validated['subject_code'])
+                ->where('id', '!=', $subject->id)
+                ->first();
+                
+            if ($existingSubject) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Subject code already exists'
+                ], 422);
+            }
+            
+            $subject->subject_code = $validated['subject_code'];
+        }
+        
+        if (isset($validated['undergraduate_subject'])) {
+            $subject->undergraduate_subject = $validated['undergraduate_subject'];
+        }
+        
+        // Save the updated subject
+        $subject->save();
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Subject updated successfully',
+            'subject' => $subject
+        ]);
+    } catch (\Exception $e) {
+        // Log the error for debugging
+        \Log::error('Subject update error: ' . $e->getMessage());
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to update subject',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
 }

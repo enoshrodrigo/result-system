@@ -37,10 +37,11 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
                 ->name('password.store');
+   
  
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth','role:admin')->group(function () {
     Route::get('verify-email', EmailVerificationPromptController::class)
                 ->name('verification.notice');
 
@@ -85,10 +86,10 @@ Route::middleware('auth')->group(function () {
     Route::post('get/get_short_course_result_lives/update',[Axios::class,'ShortCourseUpdateLive'])->name('ShortCourseUpdateLive');
 
     Route::post('delete/batch',[DeleteRequets::class,'deleteBatch'])->name('deleteBatch');
-    Route::post('add/subject',[AddBatchsAndSubs::class,'addSubject'])->name('addSubject');
-    Route::post('get/all-subject-status',[Axios::class,'allsubjectsStatus'])->name('allsubjectstatus');
+    
+   
     Route::post('get/updatesubject-status',[Axios::class,'updatesubject'])->name('updatesubject');
-    Route::post('delete/subject',[DeleteRequets::class,'deletesubject'])->name('deletesubject');
+   
 
 
     Route::post('/get/batchcode', [Axios::class, 'checkBatchCode'])->name('checkBatchCode');
@@ -104,18 +105,18 @@ Route::middleware('auth')->group(function () {
 
     Route::post('add/student',[AddBatchsAndSubs::class,'addStudentBatch'])->name('addStudentBatch');
     Route::post('put/updateStatus',[Axios::class,'updateStatus'])->name('updateStatus');
-
+  
     /* verifySubjects */
-    
+  
     Route::post('verify/subjects',[AddBatchsAndSubs::class,'verifySubjects'])->name('verifySubjects');
+ 
+});
 
-
-
-
-
-
-
-
-
-
+Route::middleware('auth','role:manager,admin')->group(function () {
+     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
+                ->name('logout');
+    Route::post('add/subject',[AddBatchsAndSubs::class,'addSubject'])->name('addSubject');
+    Route::post('get/all-subject-status',[Axios::class,'allsubjectsStatus'])->name('allsubjectstatus');
+    Route::post('/updatesubject', [AddBatchsAndSubs::class, 'updateSubject'])->name('updatesubject'); 
+    Route::post('delete/subject',[DeleteRequets::class,'deletesubject'])->name('deletesubject');
 });

@@ -31,16 +31,16 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth', 'verified','role:admin'])->name('dashboard');
 
-Route::get('/view/render-result', function () {
+/* Route::get('/view/render-result', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('viewAllBatchResult');
+})->middleware(['auth', 'verified','role:admin'])->name('viewAllBatchResult'); */
 
   
 Route::get('/upload-result', function () {
     return Inertia::render('UploadResult');
-})->middleware(['auth', 'verified'])->name('upload');
+})->middleware(['auth', 'verified','role:admin'])->name('upload');
 
 
 
@@ -48,7 +48,7 @@ Route::get('/upload-result', function () {
 
 Route::get('/add-subject', function () {
     return Inertia::render('AddSubject');
-})->middleware(['auth', 'verified'])->name('getsubjects');
+})->middleware(['auth', 'verified','role:manager,admin'])->name('getsubjects');
 
 
 Route::get('/view-result', function () {
@@ -59,15 +59,15 @@ Route::post('/check-result', [ViewResult::class,'get'])->name('checkresult');
 
 Route::get('/check-result', [ViewResult::class, 'show'])->name('checkresult');
 
- Route::post('/Display/render-result',[DisplayStudent::class,'DisplayResult'])->name('DisplayResult');
-    Route::get('/Display/render-result',[DisplayStudent::class,'getresult'])->name('DisplayResult');
+ Route::post('/display/student-result',[DisplayStudent::class,'DisplayResult'])->name('DisplayResult');
+    Route::get('/display/student-result',[DisplayStudent::class,'getresult'])->name('DisplayResult');
  
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth','role:admin')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy'); 
-    Route::post('/view/render-result',[Axios::class,'viewAllBatchResult'])->name('viewAllBatchResult');
+    Route::get('/view/batch',[Axios::class,'viewAllBatchResult'])->name('viewAllBatchResult');
     Route::get('/view/getStatistics',[Axios::class,'getStatistics'])->name('getStatistics'); 
    
 });

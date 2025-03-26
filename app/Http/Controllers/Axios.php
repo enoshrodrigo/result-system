@@ -119,7 +119,7 @@ class Axios extends Controller
 {
     $resultLive = DB::table('short_course_result_lives')
         ->join('batchs', 'batchs.id', '=', 'short_course_result_lives.short_batch_course_id')
-        ->select('short_course_result_lives.live', 'batchs.batch_name', 'batchs.batch_code', 'batchs.batch_year')
+        ->select('short_course_result_lives.live', 'batchs.batch_name', 'batchs.batch_code', 'batchs.batch_year', 'batchs.created_at as created_date')
         ->orderBy('batchs.created_at', 'desc')
         ->paginate(200); // Paginate with 10 items per page
 
@@ -188,7 +188,7 @@ public function viewAllBatchResult(Request $request)
 {
     try {
         // Get batch information
-        $batch_code = $request->input('batch');
+        $batch_code = $request->query('batch');
         $batch = batchs::where('batch_code', $batch_code)->first();
         
         if (!$batch) {
@@ -262,7 +262,8 @@ public function allsubjectsStatus(Request $request){
        
     
         $all_subjects=DB::table('subjects')
-        ->select('subjects.subject_name','subjects.subject_code','subjects.undergraduate_subject') 
+        ->select('subjects.subject_name','subjects.subject_code','subjects.undergraduate_subject','subjects.created_at as created_at') 
+      ->orderBy( 'subjects.created_at','desc')
         ->get();
     
     return response()->json(['all_subjects'=>$all_subjects]);

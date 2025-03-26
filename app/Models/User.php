@@ -41,4 +41,23 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+    public function hasRole($roleToCheck)
+    {
+        // No role assigned to user
+        if (empty($this->role)) {
+            return false;
+        }
+        
+        // Convert user's role to array (in case it's a comma-separated list)
+        $userRoles = explode(',', $this->role);
+        $userRoles = array_map('trim', $userRoles);
+        
+        // Check if the requested role is in the user's roles
+        return in_array(trim($roleToCheck), $userRoles);
+    }
+
+public function isAdmin()
+{
+    return $this->role === 'admin';
+}
 }
