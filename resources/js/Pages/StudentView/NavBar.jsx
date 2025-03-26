@@ -3,10 +3,13 @@ import React from 'react'
 export default function NavBar( 
   {color}
 ) {
+  const bgStyle = !color 
+  ? { backgroundColor: 'rgb(63, 151, 177)'  } 
+  : { background: 'linear-gradient(to right, #1e40af, #3b82f6)' };
   return (
     <div class='p-2'  
      //if color is available in props then apply that color to the background
-      style={{backgroundColor:color?color:'rgb(63, 151, 177)'}}
+style={{ background: 'linear-gradient(to right, rgb(63, 151, 177), rgb(66 155 214))' }}
     >
      
         <img src='https://www.bci.lk/wp-content/uploads/2020/12/logo.svg' class='w-44   m-auto ' 

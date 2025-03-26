@@ -5,7 +5,7 @@ import Footer from '@/Components/Footer';
 import toast, { Toaster } from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import SeasonalSnowfall from '../componments/SeasonalSnowfall';
-
+import { MdCheck } from 'react-icons/md';
 export default function Display_result(props) {
   const notify = () => toast('BCI Campus', { icon: "🎓" });
   const notify2 = () => toast('ASPIRE TO INSPIRE', { icon: "🪄" });
@@ -119,6 +119,21 @@ export default function Display_result(props) {
                 )}
               </tbody>
             </table>
+               {/* Verification Stamp (only for PDF) */}
+         {/*  {isPrinting && (
+            <div className="mt-8 border-t pt-4 text-center">
+              <p className="text-sm text-gray-500">This is a computer-generated document. No signature required.</p>
+              <div className="flex justify-center items-center mt-2">
+                <div className="border-2 border-dashed border-gray-300 p-4 rounded-lg inline-block">
+                  <MdCheck className="text-green-500 text-4xl" />
+                  <p className="text-xs font-bold mt-1">VERIFIED</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-4">
+                Issued on: {new Date().toLocaleDateString()}
+              </p>
+            </div>
+          )} */}
           </div>
   
         </div>
