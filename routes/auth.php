@@ -97,6 +97,18 @@ Route::middleware('auth')->group(function () {
 
 
 
+ Route::post('put/updateGrade',[Axios::class,'updateGrade'])->name('updateGrade');
+ /* Delete result for one studnt */
+    Route::post('delete/result',[DeleteRequets::class,'deleteResult'])->name('deleteResult');
+    /* Add studnt to batch with subjects*/
+
+    Route::post('add/student',[AddBatchsAndSubs::class,'addStudentBatch'])->name('addStudentBatch');
+    Route::post('put/updateStatus',[Axios::class,'updateStatus'])->name('updateStatus');
+
+    /* verifySubjects */
+    
+    Route::post('verify/subjects',[AddBatchsAndSubs::class,'verifySubjects'])->name('verifySubjects');
+
 
 
 

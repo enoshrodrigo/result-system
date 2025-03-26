@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\assign_short_course_subject;
 use App\Models\batchs;
 use App\Models\department_course;
+use App\Models\short_course_statu;
 use App\Models\subject;
 use Exception;
 use Illuminate\Http\Request;
@@ -99,4 +100,190 @@ try{
 }
 
 }
+
+public function addStudentBatch(Request $request){
+    try {
+        // Extract data from the request
+        $first_name = $request->input('first_name');
+        $NIC = $request->input('NIC');
+        $subjects = $request->input('subjects');
+        $batch_code = $request->input('batch_code');
+        $short_course_status = $request->input('status'); 
+        
+        // Start a database transaction
+        DB::beginTransaction();
+        
+        // Find the batch by batch code
+        $batch = batchs::where('batch_code', $batch_code)->first();
+        if(!$batch) {
+            return response()->json(['message' => 'Batch not found'], 404);
+        }
+        
+        // Check if student with this NIC already exists
+        $existingStudent = DB::table('short_course_students')
+            ->where('NIC_PO', $NIC)
+            ->first();
+            
+        if($existingStudent) {
+            // If student exists, use their ID
+            $student_id = $existingStudent->id;
+        } else {
+            // Create a new student
+            $student_id = DB::table('short_course_students')->insertGetId([
+                'first_name' => $first_name,
+                'NIC_PO' => $NIC,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+        
+        // Process each subject and add grades
+        foreach($subjects as $subject) {
+            $subject_obj = subject::where('subject_code', $subject['subject_code'])->first();
+            if(!$subject_obj) {
+                DB::rollBack();
+                return response()->json(['message' => 'Subject not found: ' . $subject['subject_code']], 404);
+            }
+            
+            // Find the assignment ID for this subject-batch combination
+            $assign_subject = DB::table('assign_short_course_subjects')
+                ->where('course_batch_id', $batch->id)
+                ->where('short_subject_id', $subject_obj->id)
+                ->first();
+                
+            if(!$assign_subject) {
+                DB::rollBack();
+                return response()->json(['message' => 'Subject not assigned to this batch'], 404);
+            }
+            
+            // Check if a grade already exists for this student-subject
+            $existingGrade = DB::table('short_course_marks')
+                ->where('short_course_student_id', $student_id)
+                ->where('assign_short_course_subjects_id', $assign_subject->id)
+                ->first();
+                
+            if($existingGrade) {
+                // Update existing grade
+                DB::table('short_course_marks')
+                    ->where('id', $existingGrade->id)
+                    ->update([
+                        'grade' => $subject['grade'],
+                        'updated_at' => now()
+                    ]);
+            } else {
+                // Insert new grade
+                DB::table('short_course_marks')->insert([
+                    'short_course_student_id' => $student_id,
+                    'assign_short_course_subjects_id' => $assign_subject->id,
+                    'grade' => $subject['grade'],
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+            
+            short_course_statu::updateOrCreate([
+                'status_batch_course_id' => $batch->id,
+                'status_student_id' => $student_id,  
+                'status' => $short_course_status ? $short_course_status : '-',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+        }
+        
+        // Commit the transaction
+        DB::commit();
+        
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'Student and grades added successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        // If something goes wrong, rollback the transaction
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to add student: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
+ 
+ 
+public function verifySubjects(Request $request) {
+    try {
+        // Validate input
+        if (!$request->has('subject_codes') || !is_array($request->input('subject_codes'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid input: subject_codes array is required',
+                'verified_subjects' => [],
+                'missing_subjects' => []
+            ], 400);
+        }
+        
+        $subjectCodes = $request->input('subject_codes');
+        
+        // Handle empty array case
+        if (empty($subjectCodes)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No subjects to verify',
+                'verified_subjects' => [],
+                'missing_subjects' => []
+            ]);
+        }
+        
+        // Get all subjects from the database in a single query
+        $allSubjects = DB::table('subjects')
+            ->whereIn('subject_code', $subjectCodes)
+            ->select('id', 'subject_name as name', 'subject_code as code')
+            ->get();
+        
+        // Create a lookup map for faster access
+        $subjectMap = [];
+        foreach ($allSubjects as $subject) {
+            $subjectMap[$subject->code] = $subject;
+        }
+        
+        $verifiedSubjects = [];
+        $missingSubjects = [];
+        
+        // Check each subject code against our map
+        foreach ($subjectCodes as $code) {
+            if (isset($subjectMap[$code])) {
+                $verifiedSubjects[] = [
+                    'code' => $code,
+                    'name' => $subjectMap[$code]->name
+                ];
+            } else {
+                $missingSubjects[] = [
+                    'code' => $code
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'verified_subjects' => $verifiedSubjects,
+            'missing_subjects' => $missingSubjects
+        ]);
+        
+    } catch (\Exception $e) {
+        // Log the error for debugging
+        \Log::error('Subject verification error: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error while verifying subjects: ' . $e->getMessage(),
+            'verified_subjects' => [],
+            'missing_subjects' => []
+        ], 500);
+    }
+}
+
 }
