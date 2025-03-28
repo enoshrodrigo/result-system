@@ -211,7 +211,7 @@ public function viewAllBatchResult(Request $request)
                 $join->on('short_course_students.id', '=', 'short_course_status.status_student_id')
                     ->where('short_course_status.status_batch_course_id', '=', $batch->id);
             })
-            ->select('short_course_students.id', 'short_course_students.first_name', 'short_course_students.NIC_PO', 'short_course_status.status')
+            ->select('short_course_students.id', 'short_course_students.first_name', 'short_course_students.NIC_PO', 'short_course_status.status', 'short_course_students.email')
             ->get();
 
         $studentAndSubject = [];
@@ -231,6 +231,7 @@ public function viewAllBatchResult(Request $request)
                 "NIC" => $student->NIC_PO,
                 "first_name" => $student->first_name,
                 "subjects" => $subjects,
+                "email" => $student->email,
                 "status" => $student->status
             ];
 
