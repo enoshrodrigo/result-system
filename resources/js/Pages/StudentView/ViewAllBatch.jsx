@@ -12,11 +12,13 @@ import {
   MdFileDownload,
   MdChevronLeft,
   MdChevronRight,
-  MdRefresh
+  MdRefresh,
+  MdEmail 
 } from "react-icons/md";
 import axios from "axios";
 /* Import toast */
 import toast, { Toaster } from "react-hot-toast";
+import EmailSender from "../componments/EmailSender";
 
 export default function ViewAllBatch(props) {
   // Helper function to get color based on grade
@@ -42,7 +44,7 @@ export default function ViewAllBatch(props) {
         return "#6B7280";
     }
   }
-
+  const [isEmailSenderVisible, setIsEmailSenderVisible] = useState(false)
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   // State for inline grade editing (keyed by student NIC + subject code)
@@ -60,7 +62,11 @@ export default function ViewAllBatch(props) {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
-  
+    // Toggle email sender visibility
+    const toggleEmailSender = () => {
+      setIsEmailSenderVisible(!isEmailSenderVisible);
+    };
+    
   // State for the new student's subject grades.
   const [studentSubjects, setStudentSubjects] = useState(
     (props.batchSubjects || []).map((subject) => ({
@@ -553,6 +559,12 @@ export default function ViewAllBatch(props) {
               </div>
               <div className="flex space-x-3">
                 <button
+                  onClick={toggleEmailSender}
+                  className="flex items-center bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-md shadow transition duration-200"
+                >
+                  <MdEmail className="mr-1" /> Send Results Email
+                </button>
+                <button
                   onClick={exportToCSV}
                   className="flex items-center bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow transition duration-200"
                   disabled={filteredStudents.length === 0}
@@ -568,7 +580,20 @@ export default function ViewAllBatch(props) {
                 </button>
               </div>
             </div>
-
+{/* Email Sender Component */}
+{isEmailSenderVisible && (
+              <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-md">
+                <EmailSender
+                  students={filteredStudents}
+                  batch={{
+                    name: props.batch_name,
+                    code: props.batch_code,
+                    year: props.batch_year
+                  }}
+                  onClose={toggleEmailSender}
+                />
+              </div>
+            )}
             {/* Inline Add Student Form */}
             {isAdding && (
               <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-md">

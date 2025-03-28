@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Axios;
 use App\Http\Controllers\CSVFile; 
 use App\Http\Controllers\DeleteRequets;
+use App\Http\Controllers\EmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -109,6 +110,7 @@ Route::middleware('auth','role:admin')->group(function () {
     /* verifySubjects */
   
     Route::post('verify/subjects',[AddBatchsAndSubs::class,'verifySubjects'])->name('verifySubjects');
+    Route::post('/send-result-email', [EmailController::class, 'sendResultEmail'])->name('sendResultEmail');
  
 });
 
