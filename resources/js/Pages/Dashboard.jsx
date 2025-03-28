@@ -159,7 +159,7 @@ export default function Dashboard(props) {
                                     <MdDashboard className="mr-2" /> Dashboard Overview
                                 </h2>
                                 <p className="mt-1 text-indigo-100">
-                                    Manage and monitor your examination batch results
+                                    Manage and monitor examination batch results
                                 </p>
                             </div>
                         </div>

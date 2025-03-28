@@ -211,7 +211,7 @@ public function viewAllBatchResult(Request $request)
                 $join->on('short_course_students.id', '=', 'short_course_status.status_student_id')
                     ->where('short_course_status.status_batch_course_id', '=', $batch->id);
             })
-            ->select('short_course_students.id', 'short_course_students.first_name', 'short_course_students.NIC_PO', 'short_course_status.status')
+            ->select('short_course_students.id', 'short_course_students.first_name', 'short_course_students.NIC_PO', 'short_course_status.status', 'short_course_students.email')
             ->get();
 
         $studentAndSubject = [];
@@ -231,6 +231,7 @@ public function viewAllBatchResult(Request $request)
                 "NIC" => $student->NIC_PO,
                 "first_name" => $student->first_name,
                 "subjects" => $subjects,
+                "email" => $student->email,
                 "status" => $student->status
             ];
 
@@ -338,7 +339,61 @@ public function UndergraduateSubjectstatus(Request $request){
 
     }
 
-  
+    public function updateBatch(Request $request)
+    {
+        try {
+            // Get the original batch code (for identification)
+            $original_batch_code = $request->input('original_batch_code');
+            
+            // Find the batch by the original code
+            $batch = batchs::where('batch_code', $original_batch_code)->first();
+            
+            if (!$batch) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batch not found'
+                ], 404);
+            }
+            
+            // Update batch name if provided
+            if ($request->has('batch_name')) {
+                $batch->batch_name = $request->input('batch_name');
+            }
+            
+            // Update batch code if provided (using the new parameter name)
+            if ($request->has('new_batch_code')) {
+                $new_batch_code = $request->input('new_batch_code');
+                
+                // Don't do anything if the code isn't actually changing
+                if ($new_batch_code !== $original_batch_code) {
+                    // Check if the new batch code already exists
+                    $existingBatch = batchs::where('batch_code', $new_batch_code)->first();
+                    
+                    if ($existingBatch) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Batch code already exists. Please choose a unique code.'
+                        ], 422);
+                    }
+                    
+                    // Update the batch code
+                    $batch->batch_code = $new_batch_code;
+                }
+            }
+            
+            $batch->save();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch updated successfully'
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating batch: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     
 //check batchcode avaliility
 

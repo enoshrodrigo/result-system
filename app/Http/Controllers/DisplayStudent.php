@@ -52,10 +52,11 @@ class DisplayStudent extends Controller
     }
         $array=[
             
-                      
+                "id" => $data->id,
                 "NIC"=>$data->NIC_PO,
                 "first_name"=>$data->first_name,
-                "subjects"=>$subjects
+                "subjects"=>$subjects,
+                "email" => $data->email,
     
             
         ];
@@ -85,7 +86,8 @@ if($short_course_status==null ){
            "result"=>$studentAndSubject,
            'status'=>$short_course_status->status,
            'batch_name'=>$department_name->course_name,
-           'result_batch' =>$batch->batch_name
+           'result_batch' =>$batch->batch_name,
+              'batch_code'=>$batch->batch_code,
            
         ]);
     

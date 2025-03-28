@@ -28,21 +28,22 @@ export default function Authenticated({ auth, header, children }) {
                                 <NavLink href={route('upload')} active={route().current('upload')}>
                                    Add results
                                 </NavLink>
-                                <NavLink href={route('ViewResult')} active={""}>
-                                    View results
-                                </NavLink>
-                                {/* <NavLink href={route('dashboard')}   active={""}>
-                                    Edit results
-                                </NavLink> */}
-                              {/*   <NavLink href={route('AddNewIntake')}   active={route().current('AddNewIntake')}>
-
-                                    Add New intake
-                                    
-                                </NavLink> */}
+                               
                                 <NavLink href={route('getsubjects')}   active={route().current('getsubjects')}>
                                     Add Subject
                                 </NavLink>
-                                 
+                                    <NavLink href={route('students.index')}   active={route().current('students.index')}>
+                                    Add Students
+                                </NavLink> 
+                                <NavLink href={route('departments.index')}   active={route().current('departments.index')}>
+                                    Manage Departments
+                                </NavLink> 
+                                <NavLink href={route('admin.email-logs.index')}   active={route().current('admin.email-logs.index')}>
+                                    Mail Logs
+                                </NavLink>
+                                <NavLink href={route('ViewResult')} active={""}>
+                                    View results
+                                </NavLink> 
                             </div>
                         </div>
 

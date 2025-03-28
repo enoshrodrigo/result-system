@@ -38,6 +38,7 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
                 ->name('password.store');
+
    
  
 });
@@ -103,15 +104,18 @@ Route::middleware('auth','role:admin')->group(function () {
  /* Delete result for one studnt */
     Route::post('delete/result',[DeleteRequets::class,'deleteResult'])->name('deleteResult');
     /* Add studnt to batch with subjects*/
-
+    Route::post('/update-batch', [Axios::class, 'updateBatch'])->name('updateBatch');
     Route::post('add/student',[AddBatchsAndSubs::class,'addStudentBatch'])->name('addStudentBatch');
     Route::post('put/updateStatus',[Axios::class,'updateStatus'])->name('updateStatus');
   
     /* verifySubjects */
   
     Route::post('verify/subjects',[AddBatchsAndSubs::class,'verifySubjects'])->name('verifySubjects');
+    
     Route::post('/send-result-email', [EmailController::class, 'sendResultEmail'])->name('sendResultEmail');
- 
+    Route::get('/check-email-progress/{batchId}', [EmailController::class, 'checkEmailProgress'])->name('checkEmailProgress');
+    Route::post('/stop-email-process', [EmailController::class, 'stopEmailProcess'])
+    ->name('stopEmailProcess');
 });
 
 Route::middleware('auth','role:manager,admin')->group(function () {
@@ -121,4 +125,5 @@ Route::middleware('auth','role:manager,admin')->group(function () {
     Route::post('get/all-subject-status',[Axios::class,'allsubjectsStatus'])->name('allsubjectstatus');
     Route::post('/updatesubject', [AddBatchsAndSubs::class, 'updateSubject'])->name('updatesubject'); 
     Route::post('delete/subject',[DeleteRequets::class,'deletesubject'])->name('deletesubject');
+    
 });

@@ -58,10 +58,62 @@ export default function ViewAllBatch(props) {
   const [editingStatus, setEditingStatus] = useState({});
   const [batchData, setBatchData] = useState(props.allBatch || []);
   const [isUpdating, setIsUpdating] = useState(false);
+  // Add these near your other state declarations
+const [isEditingBatchName, setIsEditingBatchName] = useState(false);
+const [isEditingBatchCode, setIsEditingBatchCode] = useState(false);
+const [editedBatchName, setEditedBatchName] = useState(props.batch_name);
+const [editedBatchCode, setEditedBatchCode] = useState(props.batch_code);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
+
+  // Add this function with your other handlers 
+const handleUpdateBatchInfo = (field, value) => {
+  // Show loading toast
+  const loadingToast = toast.loading(`Updating batch ${field}...`);
+  setIsUpdating(true);
+  
+  // Create request data object
+  let requestData = {
+    original_batch_code: props.batch_code // Always send original batch code for identification
+  };
+  
+  // Add the field to update
+  if (field === 'batch_code') {
+    requestData.new_batch_code = value;
+  } else {
+    requestData[field] = value;
+  }
+  
+  // Make API call to update batch info
+  axios.post(route('updateBatch'), requestData)
+  .then(response => {
+    if (response.data.success) {
+      toast.dismiss(loadingToast);
+      toast.success(`Batch ${field} updated successfully`);
+      
+      // If we updated the batch_code, redirect to the new URL
+      if (field === 'batch_code' && value !== props.batch_code) {
+        // Wait a moment to show the success toast before redirecting
+        setTimeout(() => {
+          window.location.href = route('viewAllBatchResult') + `?batch=${value}`;
+        }, 1500);
+      }
+    } else {
+      toast.dismiss(loadingToast);
+      toast.error(response.data.message || `Failed to update batch ${field}`);
+    }
+  })
+  .catch(error => {
+    console.error(`Error updating batch ${field}:`, error);
+    toast.dismiss(loadingToast);
+    toast.error(`Error updating batch ${field}: ${error.response?.data?.message || 'Unknown error'}`);
+  })
+  .finally(() => {
+    setIsUpdating(false);
+  });
+};
     // Toggle email sender visibility
     const toggleEmailSender = () => {
       setIsEmailSenderVisible(!isEmailSenderVisible);
@@ -458,13 +510,44 @@ export default function ViewAllBatch(props) {
             <div className="text-gray-900 dark:text-gray-100 mb-6">
   <h3 className="text-lg font-semibold mb-2">Summary</h3>
   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 justify-center">
-    <div className="md:col-span-3 bg-gradient-to-br from-amber-400 to-yellow-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
-      <div className="flex items-center justify-center mb-2">
-        <MdPeople className="text-3xl mr-2" />
-        <p className="text-2xl font-bold">{props.batch_name}</p>
-      </div>
-      <p className="text-sm font-medium">Examination Batch</p>
-    </div>
+  <div className="md:col-span-3 bg-gradient-to-br from-amber-400 to-yellow-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
+  <div className="flex items-center justify-center mb-2">
+    <MdPeople className="text-3xl mr-2" />
+    {isEditingBatchName ? (
+  // Replace your current input for batch name with this improved version
+<input
+  type="text"
+  value={editedBatchName}
+  onChange={(e) => setEditedBatchName(e.target.value)}
+  onBlur={() => {
+    setIsEditingBatchName(false);
+    if (editedBatchName !== props.batch_name && editedBatchName.trim() !== '') {
+      handleUpdateBatchInfo('batch_name', editedBatchName);
+    }
+  }}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    } else if (e.key === 'Escape') {
+      setEditedBatchName(props.batch_name);
+      setIsEditingBatchName(false);
+    }
+  }}
+  className="text-2xl font-bold   min-w-[350px] max-w-[1200px] bg-amber-500 border-b-2 border-white text-white text-center px-3 py-1 outline-none"
+  autoFocus
+/>
+    ) : (
+      <p 
+        className="text-2xl font-bold cursor-pointer hover:underline"
+        onDoubleClick={() => setIsEditingBatchName(true)}
+        title="Double-click to edit batch name"
+      >
+        {editedBatchName}
+      </p>
+    )}
+  </div>
+  <p className="text-sm font-medium">Examination Batch</p>
+</div>
     {/* total students */}
     <div className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
       <div className="flex items-center justify-center mb-2">
@@ -474,12 +557,42 @@ export default function ViewAllBatch(props) {
       <p className="text-sm font-medium">Total Students</p>
     </div>
     <div className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
-      <div className="flex items-center justify-center mb-2">
-        <MdSchool className="text-3xl mr-2" />
-        <p className="text-2xl font-bold">{props.batch_code}</p>
-      </div>
-      <p className="text-sm font-medium">Batch Code</p>
-    </div>
+  <div className="flex items-center justify-center mb-2">
+    <MdSchool className="text-3xl mr-2" />
+    {isEditingBatchCode ? (
+      <input
+        type="text"
+        value={editedBatchCode}
+        onChange={(e) => setEditedBatchCode(e.target.value)}
+        onBlur={() => {
+          setIsEditingBatchCode(false);
+          if (editedBatchCode !== props.batch_code && editedBatchCode.trim() !== '') {
+            handleUpdateBatchInfo('batch_code', editedBatchCode);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.target.blur();
+          } else if (e.key === 'Escape') {
+            setEditedBatchCode(props.batch_code);
+            setIsEditingBatchCode(false);
+          }
+        }}
+        className="text-2xl font-bold bg-teal-500 border-b-2 border-white text-white text-center"
+        autoFocus
+      />
+    ) : (
+      <p 
+        className="text-2xl font-bold cursor-pointer hover:underline"
+        onDoubleClick={() => setIsEditingBatchCode(true)}
+        title="Double-click to edit batch code"
+      >
+        {editedBatchCode}
+      </p>
+    )}
+  </div>
+  <p className="text-sm font-medium">Batch Code</p>
+</div>
     {/* released date */}
     <div className="bg-gradient-to-br from-blue-400 to-indigo-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
       <div className="flex items-center justify-center mb-2">
