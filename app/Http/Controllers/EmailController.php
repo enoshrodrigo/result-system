@@ -1,19 +1,20 @@
 <?php
+// app/Http/Controllers/EmailController.php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\ResultEmail; // Assuming you have a Mailable class for sending emails
 use App\Mail\StudentResult;
 use App\Models\short_course_student;
-use App\Models\Student; // Assuming you have a Student model
-use App\Models\Students;
+use App\Models\Student;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use App\Jobs\SendResultEmail;
 
 class EmailController extends Controller
 {
-   
     public function sendResultEmail(Request $request)
     {
         // Validate the request
@@ -31,86 +32,101 @@ class EmailController extends Controller
         $emails = $request->emails;
         $batchCode = $request->batchCode;
         
-        $sent = 0;
-        $failed = 0;
-        $failedEmails = [];
-
-        // Process each email in the batch
-        foreach ($emails as $emailData) {
-            try {
-                // Send the email
-                Mail::to($emailData['email'])
-                    ->send(new StudentResult($subject, $emailData['content']));
-                
-                // Log successful send
-                Log::info("Result email sent to student: {$emailData['studentId']} ({$emailData['email']})");
-                
-                $sent++;
-                
-                // Small delay to avoid overwhelming the mail server
-                usleep(100000); // 100ms delay
-                
-            } catch (\Exception $e) {
-                // Log failure
-                Log::error("Failed to send result email to {$emailData['studentId']}: {$e->getMessage()}");
-                
-                // Track failed email
-                $failed++;
-                $failedEmails[] = [
-                    'studentId' => $emailData['studentId'],
-                    'name' => $emailData['studentName'],
-                    'email' => $emailData['email'],
-                    'error' => $e->getMessage()
-                ];
-            }
+        // Generate a unique batch ID
+        $batchId = (string) Str::uuid();
+        
+        // Initialize the batch progress
+        Cache::put("email_batch_{$batchId}", [
+            'total' => count($emails),
+            'sent' => 0,
+            'failed' => 0,
+            'completed' => false,
+            'currentStudent' => null,
+            'failedEmails' => []
+        ], now()->addDay());
+        
+        // Dispatch jobs for each email
+        foreach ($emails as $index => $emailData) {
+            SendResultEmail::dispatch(
+                $emailData, 
+                $subject, 
+                $batchId, 
+                $index + 1, 
+                count($emails)
+            )->delay(now()->addSeconds($index * 1)); // Add small delay between jobs
         }
-
-        // Return batch results
+        
+        // Return the batch ID for tracking
         return response()->json([
             'success' => true,
-            'sent' => $sent,
-            'failed' => $failed,
-            'failedEmails' => $failedEmails,
-            'message' => "Processed {$sent} emails successfully, {$failed} failed."
+            'batchId' => $batchId,
+            'message' => 'Email sending process started in the background'
+        ]);
+    }
+    
+    // API endpoint to check progress
+    public function checkEmailProgress($batchId)
+    {
+        $progress = Cache::get("email_batch_{$batchId}");
+        
+        if (!$progress) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found'
+            ], 404);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'progress' => $progress
         ]);
     }
 
-    public function sendEmails(Request $request)
+    public function stopEmailProcess(Request $request)
     {
-        $validated = $request->validate([
-            'subject' => 'required|string|max:255',
-            'content' => 'required|string',
-            'recipients' => 'required|array',
-            'recipients.*' => 'exists:students,NIC',
+        $request->validate([
+            'batchId' => 'required|string',
         ]);
-
-        $recipients = $validated['recipients'];
-        $subject = $validated['subject'];
-        $content = $validated['content'];
-
-        $totalRecipients = count($recipients);
-        $sentCount = 0;
-        $failedCount = 0;
-        $failedRecipients = [];
-
-        foreach ($recipients as $recipient) {
+        
+        $batchId = $request->input('batchId');
+        
+        // Get current progress
+        $progress = Cache::get("email_batch_{$batchId}");
+        
+        if (!$progress) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found'
+            ], 404);
+        }
+        
+        // Mark as completed to stop further processing
+        $progress['completed'] = true;
+        
+        // Add a special flag for stopping
+        $progress['stopped'] = true;
+        $progress['stoppedAt'] = now()->toIso8601String();
+        
+        // Store the updated progress
+        Cache::put("email_batch_{$batchId}", $progress, now()->addDay());
+        
+        // If you're using database queue, you can also attempt to remove pending jobs
+        if (config('queue.default') === 'database') {
             try {
-                $student = short_course_student::where('NIC_PO', $recipient)->first();
-                Mail::to($student->email)->send(new StudentResult($subject, $content));
-                $sentCount++;
+                // This will only work with database queue
+                \DB::table('jobs')
+                    ->where('payload', 'like', '%' . $batchId . '%')
+                    ->delete();
             } catch (\Exception $e) {
-                Log::error("Failed to send email to {$recipient}: " . $e->getMessage());
-                $failedCount++;
-                $failedRecipients[] = $recipient;
+                // Log but continue - this is a best-effort approach
+                Log::error('Could not clear queue jobs: ' . $e->getMessage());
             }
         }
-
+        
         return response()->json([
             'success' => true,
-            'total' => $totalRecipients,
-            'sent' => $sentCount,
-            'failed' => $failedCount,
-            'failed_recipients' => $failedRecipients,
+            'message' => 'Email process stopped successfully',
+            'progress' => $progress
         ]);
     }
 }
