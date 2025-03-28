@@ -110,8 +110,11 @@ Route::middleware('auth','role:admin')->group(function () {
     /* verifySubjects */
   
     Route::post('verify/subjects',[AddBatchsAndSubs::class,'verifySubjects'])->name('verifySubjects');
+    
     Route::post('/send-result-email', [EmailController::class, 'sendResultEmail'])->name('sendResultEmail');
- 
+    Route::get('/check-email-progress/{batchId}', [EmailController::class, 'checkEmailProgress'])->name('checkEmailProgress');
+    Route::post('/stop-email-process', [EmailController::class, 'stopEmailProcess'])
+    ->name('stopEmailProcess');
 });
 
 Route::middleware('auth','role:manager,admin')->group(function () {
