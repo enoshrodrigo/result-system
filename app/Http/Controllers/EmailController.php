@@ -56,7 +56,14 @@ class EmailController extends Controller
                 count($emails)
             )->delay(now()->addSeconds($index * 1)); // Add small delay between jobs
         }
-        
+        $this->logEmailOperation('sendResultEmail', [
+            'batchId' => $batchId,
+            'subject' => $subject,
+            'batchCode' => $batchCode,
+            'emailCount' => count($emails),
+            'ipAddress' => $request->ip(),
+            'userAgent' => $request->header('User-Agent')
+        ]);
         // Return the batch ID for tracking
         return response()->json([
             'success' => true,
@@ -76,7 +83,12 @@ class EmailController extends Controller
                 'message' => 'Batch not found'
             ], 404);
         }
-        
+        $this->logEmailOperation('checkEmailProgress', [
+            'batchId' => $batchId,
+            'progress' => $progress,
+            'ipAddress' => request()->ip(),
+            'userAgent' => request()->header('User-Agent')
+        ]);
         return response()->json([
             'success' => true,
             'progress' => $progress
@@ -123,7 +135,12 @@ class EmailController extends Controller
                 Log::error('Could not clear queue jobs: ' . $e->getMessage());
             }
         }
-        
+        $this->logEmailOperation('stopEmailProcess', [
+            'batchId' => $batchId,
+            'progress' => $progress,
+            'ipAddress' => $request->ip(),
+            'userAgent' => $request->header('User-Agent')
+        ]);
         return response()->json([
             'success' => true,
             'message' => 'Email process stopped successfully',
@@ -243,6 +260,7 @@ public function sendStudentResult(Request $request)
         $this->logEmailRequest([
             'student_id' => $student->id,
             'student_name' => $student->first_name,
+            'opened' => false,
             'nic' => $student->NIC_PO,
             'email' => $request->email,
             'batch_code' => $request->batchCode,
@@ -250,6 +268,7 @@ public function sendStudentResult(Request $request)
             'ip_address' => $ipAddress,
             'timestamp' => now()->toDateTimeString(),
             'user_agent' => $request->header('User-Agent'),
+            "email_type" => "result",
             'status' => 'success'
         ]);
 
@@ -265,6 +284,7 @@ public function sendStudentResult(Request $request)
         $this->logEmailRequest([
             'student_id' => $student->id,
             'student_name' => $student->first_name,
+            'opened' => false,
             'nic' => $student->NIC_PO,
             'email' => $request->email,
             'batch_code' => $request->batchCode,
@@ -272,6 +292,7 @@ public function sendStudentResult(Request $request)
             'ip_address' => $ipAddress,
             'timestamp' => now()->toDateTimeString(),
             'user_agent' => $request->header('User-Agent'),
+             "email_type" => "result",
             'status' => 'failed',
             'error' => $e->getMessage()
         ]);
@@ -424,6 +445,89 @@ public function getLogsApi(Request $request)
     }
     
     return response()->json([
+        'logs' => $logs,
+        'availableDates' => $availableDates,
+    ]);
+}
+
+
+
+private function logEmailOperation($operation, $data)
+{
+    // Create logs directory if it doesn't exist
+    $logsDir = storage_path("logs/email-operations/{$operation}");
+    if (!file_exists($logsDir)) {
+        mkdir($logsDir, 0755, true);
+    }
+    
+    // Format for log file - one per day
+    $filename = $logsDir . '/' . $operation . '-' . now()->format('Y-m-d') . '.log';
+    
+    // Add timestamp to the log entry
+    $data['logged_at'] = now()->toDateTimeString();
+    
+    // Format the log entry
+    $logEntry = json_encode($data) . "\n";
+    
+    // Append to log file
+    file_put_contents($filename, $logEntry, FILE_APPEND);
+}
+
+
+public function getOperationLogs(Request $request, $operation)
+{
+    // Validate operation
+    $validOperations = ['sendResultEmail', 'checkEmailProgress', 'stopEmailProcess'];
+    if (!in_array($operation, $validOperations)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid operation'
+        ], 400);
+    }
+    
+    // Get the date parameter (optional)
+    $date = $request->input('date', now()->format('Y-m-d'));
+    
+    // Build the logs directory path
+    $logsDir = storage_path("logs/email-operations/{$operation}");
+    
+    // Get available log dates
+    $availableDates = collect(glob($logsDir . "/{$operation}-*.log"))
+        ->map(function ($file) use ($operation) {
+            preg_match("/{$operation}-(\d{4}-\d{2}-\d{2})\.log$/", $file, $matches);
+            return $matches[1] ?? null;
+        })
+        ->filter()
+        ->sort()
+        ->values()
+        ->toArray();
+    
+    // Determine which log file to read
+    $logFile = $logsDir . "/{$operation}-{$date}.log";
+    
+    // Read and parse the log file
+    $logs = [];
+    
+    if (file_exists($logFile)) {
+        $content = file_get_contents($logFile);
+        $lines = explode("\n", $content);
+        
+        foreach ($lines as $line) {
+            if (trim($line) !== '') {
+                try {
+                    $logs[] = json_decode($line, true);
+                } catch (\Exception $e) {
+                    // Skip invalid JSON lines
+                    continue;
+                }
+            }
+        }
+    }
+    
+    return response()->json([
+        'success' => true,
+        'operation' => $operation,
+        'date' => $date,
         'logs' => $logs,
         'availableDates' => $availableDates,
     ]);

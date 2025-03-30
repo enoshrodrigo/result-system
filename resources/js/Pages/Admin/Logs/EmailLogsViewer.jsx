@@ -777,7 +777,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                     </div>
                   </button>
                   
-                  <button
+                {/*   <button
                     onClick={() => handleTrackingTypeChange('batch')}
                     className={`py-3 px-6 font-medium text-sm focus:outline-none whitespace-nowrap ${
                       trackingType === 'batch'
@@ -789,7 +789,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                       <MdClass className="mr-1.5" />
                       <span>Batch Results</span>
                     </div>
-                  </button>
+                  </button> */}
                   
                   <button
                     onClick={() => handleTrackingTypeChange('result')}
@@ -805,7 +805,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                     </div>
                   </button>
                   
-                  <button
+            {/*       <button
                     onClick={() => handleTrackingTypeChange('personal')}
                     className={`py-3 px-6 font-medium text-sm focus:outline-none whitespace-nowrap ${
                       trackingType === 'personal'
@@ -817,7 +817,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                       <MdPersonalInjury className="mr-1.5" />
                       <span>Personal Emails</span>
                     </div>
-                  </button>
+                  </button> */}
                 </div>
               )}
               
@@ -849,7 +849,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
               {/* Type-specific stats for tracking tab */}
               {activeTab === TAB_TYPES.TRACKING && trackingType === 'all' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg shadow-sm border border-blue-200 dark:border-blue-700">
+           {/*        <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg shadow-sm border border-blue-200 dark:border-blue-700">
                     <div className="flex items-center mb-2">
                       <MdClass className="text-blue-600 dark:text-blue-400 mr-2" />
                       <h4 className="text-sm font-medium text-blue-700 dark:text-blue-300">Batch Results</h4>
@@ -863,7 +863,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                         <span className="text-blue-800 dark:text-blue-200 font-bold">{trackingStats.batch.openRate}%</span>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                   
                   <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-lg shadow-sm border border-green-200 dark:border-green-700">
                     <div className="flex items-center mb-2">
@@ -881,7 +881,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-lg shadow-sm border border-purple-200 dark:border-purple-700">
+        {/*           <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-lg shadow-sm border border-purple-200 dark:border-purple-700">
                     <div className="flex items-center mb-2">
                       <MdPersonalInjury className="text-purple-600 dark:text-purple-400 mr-2" />
                       <h4 className="text-sm font-medium text-purple-700 dark:text-purple-300">Personal Emails</h4>
@@ -895,7 +895,7 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                         <span className="text-purple-800 dark:text-purple-200 font-bold">{trackingStats.personal.openRate}%</span>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               )}
               

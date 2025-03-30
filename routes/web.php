@@ -74,6 +74,7 @@ Route::middleware('auth','role:admin')->group(function () {
     Route::get('/view/getStatistics',[Axios::class,'getStatistics'])->name('getStatistics'); 
     Route::get('/admin/email-logs', [EmailController::class, 'viewLogs'])->name('admin.email-logs.index');
     Route::get('/admin/email-logs/api', [EmailController::class, 'getLogsApi'])->name('admin.email-logs.api');
+    Route::get('/admin/email-operations/{operation}/logs', [EmailController::class, 'getOperationLogs'])->name('admin.email-operations.logs');
    
 });
 
