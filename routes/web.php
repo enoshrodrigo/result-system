@@ -101,3 +101,61 @@ Route::middleware('auth','role:manager,admin')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+ 
+/* public function uploadProfileImage(Request $request)
+{
+    // Validate the request
+    $request->validate([
+        'profile_image' => 'required|image|max:2048',
+        'student_id' => 'required|exists:short_course_students,id'
+    ]);
+    
+    // Store the file
+    $file = $request->file('profile_image');
+    $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+    $path = 'profile-images/' . $fileName;
+    
+    // Save to storage
+    Storage::disk('public')->put($path, file_get_contents($file));
+    
+    // Update student record
+    $student = short_course_student::findOrFail($request->student_id);
+    $student->profile_image = $path;
+    $student->save();
+    
+    // Create a custom image URL that works on Hostinger
+    $baseUrl = url('/'); // Your application base URL
+    $imageUrl = $baseUrl . '/images/' . $path;
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Profile image updated successfully',
+        'image_url' => $imageUrl,
+        'path' => $path // Used for debugging
+    ]);
+} */
+
+
+ 
+// Custom route for serving images (works on Hostinger without storage:link)
+/* Route::get('/images/{path}', function($path) {
+    // Security: Prevent directory traversal
+    $path = str_replace('..', '', $path);
+    
+    // Get the file path in storage
+    $fullPath = storage_path('app/public/' . $path);
+    
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+    
+    // Get the file content and MIME type
+    $fileContents = file_get_contents($fullPath);
+    $mimeType = mime_content_type($fullPath) ?: 'image/jpeg';
+    
+    // Return the image with proper headers
+    return response($fileContents)
+        ->header('Content-Type', $mimeType)
+        ->header('Cache-Control', 'public, max-age=86400');
+})->where('path', '.*'); */
