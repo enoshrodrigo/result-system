@@ -79,7 +79,6 @@ Route::middleware('auth','role:admin')->group(function () {
 });
 
 Route::middleware('auth','role:manager,admin')->group(function () {
-   
         Route::get('/students', [StudentController::class, 'index'])->name('students.index');
         Route::post('/students', [StudentController::class, 'store'])->name('students.store');
         Route::put('/students/{student}', [StudentController::class, 'update'])->name('students.update');
