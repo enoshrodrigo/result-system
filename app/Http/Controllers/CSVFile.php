@@ -11,6 +11,7 @@ use App\Models\short_course_student;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class CSVFile extends Controller
@@ -152,8 +153,12 @@ class CSVFile extends Controller
                     return response()->json(['message' => 'success'], 200);
 
                 } catch (Exception $e) {
+
                     DB::rollback();
-                    
+                          Log::error('Error uploading JSON and CSV: ' . $e->getMessage(), [
+                    'jsonData' => $request->input('jsonData'),
+                    'CSVFile' => $request->file('CSVFile')->getClientOriginalName(),
+                ]);
                 }
            
         }
@@ -162,6 +167,13 @@ class CSVFile extends Controller
                 // Handle exception
 
                 DB::rollback();
+                dd($e->getMessage());
+                // Log the error message and any relevant data
+                Log::error('Error uploading JSON and CSV: ' . $e->getMessage(), [
+                    'jsonData' => $request->input('jsonData'),
+                    'CSVFile' => $request->file('CSVFile')->getClientOriginalName(),
+                ]);
+                // Optionally, you can return a response to the client
                 return  $e;
             }
     }

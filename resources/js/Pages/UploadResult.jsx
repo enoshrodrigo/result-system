@@ -213,6 +213,7 @@ function UploadResult(props) {
                     location.reload();
                 }, 2000);
             } else {
+                console.log(res.data);
                 toast.error('Failed to upload results');
             }
         })
