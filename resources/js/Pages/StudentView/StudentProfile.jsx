@@ -5,10 +5,10 @@ import {
     MdPerson, MdEmail, MdPhone, MdSchool, MdLocationOn, MdCalendarToday,
     MdAssignment, MdBarChart, MdVerified, MdEdit, MdHistory, MdOutlineInsertPhoto,
     MdViewList, MdPrint, MdFileDownload, MdLogout, MdInfoOutline,
-    MdInsertDriveFile, MdBookmark, MdCheck, MdArrowUpward
-} from 'react-icons/md';
+    MdInsertDriveFile, MdBookmark, MdCheck, MdArrowUpward, MdLock, MdVisibility, MdVisibilityOff,
+    MdExpandMore, MdExpandLess
+  } from 'react-icons/md';
 import { toast, Toaster } from 'react-hot-toast';
- 
 import { Dialog } from '@headlessui/react';
 import * as XLSX from 'xlsx'; 
 
@@ -25,22 +25,89 @@ export default function StudentProfile({ student, results = [], batches = [], re
     const [expandedBatch, setExpandedBatch] = useState(null);
 const [filteredResults, setFilteredResults] = useState([]);
 const [filterValue, setFilterValue] = useState("all");
+const [showPasswordSection, setShowPasswordSection] = useState(false);
+
+const [passwordForm, setPasswordForm] = useState({
+  current_password: '',
+  new_password: '',
+  password_confirmation: ''
+});
+const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+const [showNewPassword, setShowNewPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+const [updatingPassword, setUpdatingPassword] = useState(false);
 // Update the getBatchGradeStats function to handle special grades
-const getBatchGradeStats = (batchId) => {
+const handlePasswordFormChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const handlePasswordUpdate = async () => {
+    // Client-side validation
+    if (passwordForm.new_password !== passwordForm.password_confirmation) {
+      toast.error('Passwords do not match');
+      return;
+    }
+  
+    if (passwordForm.new_password.length < 6) {
+      toast.error('Password should be at least 6 characters');
+      return;
+    }
+  
+    setUpdatingPassword(true);
+  
+    try {
+      const response = await axios.post(route('student.update-password'), {
+        current_password: passwordForm.current_password,
+        password: passwordForm.new_password,
+        password_confirmation: passwordForm.password_confirmation
+      });
+  
+      if (response.data.success) {
+        toast.success('Password updated successfully');
+        // Reset form
+        setPasswordForm({
+          current_password: '',
+          new_password: '',
+          password_confirmation: ''
+        });
+      } else {
+        toast.error(response.data.message || 'Failed to update password');
+      }
+    } catch (error) {
+      console.error('Password update error:', error);
+      
+      if (error.response && error.response.data && error.response.data.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response && error.response.status === 422) {
+        // Validation errors
+        const errors = error.response.data.errors || {};
+        Object.values(errors).flat().forEach(err => toast.error(err));
+      } else {
+        toast.error('Failed to update password. Please check current password and try again.');
+      }
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+  const getBatchGradeStats = (batchId) => {
     // Filter results for this batch
     const batchResults = results.filter(result => 
         batches.find(b => b.batch_id === batchId && b.batch_code === result.batch_code)
     );
     
-    // Initialize grade counts
+    // Initialize grade counts with normalized keys
     const gradeCounts = {
         'A+': 0, 'A': 0, 'A-': 0,
         'B+': 0, 'B': 0, 'B-': 0,
         'C+': 0, 'C': 0, 'C-': 0,
         'D+': 0, 'D': 0, 'D-': 0,
         'F': 0,
-        'Absent': 0,  // Add Absent category
-        'Other': 0    // Any other non-standard grades
+        'Absent': 0,
+        'Other': 0
     };
     
     // Count valid results
@@ -65,23 +132,27 @@ const getBatchGradeStats = (batchId) => {
             return;
         }
         
-        // Count valid standard grades
-        if (gradeCounts.hasOwnProperty(result.grade)) {
-            gradeCounts[result.grade]++;
-            
-            // Count passed results
-            if (['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade)) {
-                passedCount++;
-            }
+        // Normalize the grade for consistent handling
+        const normalizedGrade = result.grade.toUpperCase().replace('_', '-');
+        
+        // Map the normalized grade to the standard form
+        let gradeKey = normalizedGrade;
+        if (Object.keys(gradeCounts).includes(normalizedGrade)) {
+            gradeCounts[normalizedGrade]++;
         } else {
             // Count other non-standard grades as Other
             gradeCounts['Other']++;
         }
+        
+        // Count passing grades - note C- is considered failing
+        if (['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(normalizedGrade)) {
+            passedCount++;
+        }
     });
     
-    // Calculate pass rate (excluding absent students)
-    const passRate = (totalValidResults - absentCount) > 0 
-        ? Math.round((passedCount / (totalValidResults - absentCount)) * 100) 
+    // Calculate pass rate (now including absent students as failed)
+    const passRate = totalValidResults > 0 
+        ? Math.round((passedCount / totalValidResults) * 100) 
         : 0;
     
     return {
@@ -130,18 +201,29 @@ const getBatchGradeStats = (batchId) => {
         if (status === "all") {
             setFilteredResults(batchResults);
         } else if (status === "passed") {
-            setFilteredResults(batchResults.filter(result => 
-                ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade)
-            ));
+            setFilteredResults(batchResults.filter(result => {
+                if (!result.grade) return false;
+                const normalizedGrade = result.grade.toUpperCase().replace('_', '-');
+                return ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(normalizedGrade);
+            }));
         } else if (status === "failed") {
-            setFilteredResults(batchResults.filter(result => 
-                result.grade && 
-                result.grade !== '-' && 
-                result.grade !== 'unknown' &&
-                !['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade) &&
-                result.grade.toLowerCase() !== 'absent' ||
-                !  result.grade.toLowerCase() === 'ab'  || !result.grade.toLowerCase() === 'a/b'
-            ));
+            setFilteredResults(batchResults.filter(result => {
+                // Check if the grade exists and is not missing/unknown
+                if (!result.grade || result.grade === '-' || result.grade === 'unknown') {
+                    return false;
+                }
+                
+                // Check if it's not an absent grade
+                const isAbsent = result.grade.toLowerCase() === 'absent' || 
+                                result.grade.toLowerCase() === 'ab' || 
+                                result.grade.toLowerCase() === 'a/b';
+                
+                // Check if it's not a passing grade
+                const isPassing = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade);
+                
+                // Return true only if it's not absent AND not passing
+                return !isAbsent && !isPassing;
+            }));
         } else if (status === "absent") {
             setFilteredResults(batchResults.filter(result => 
                 result.grade && 
@@ -169,9 +251,12 @@ const getBatchGradeStats = (batchId) => {
             ['Grade:', result.grade],
             ['Status:', result.grade.toLowerCase() === 'absent' || result.grade.toLowerCase() === 'ab' || result.grade.toLowerCase() === 'a/b' 
                 ? 'Absent'
-                : ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade)
-                    ? 'Passed' 
-                    : 'Failed'],
+                : (() => {
+                    const normalizedGrade = result.grade.toUpperCase().replace('_', '-');
+                    return ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(normalizedGrade) 
+                        ? 'Passed' 
+                        : 'Failed';
+                  })()],
             ['Date:', new Date().toLocaleDateString()]
         ];
         
@@ -332,10 +417,13 @@ const getBatchGradeStats = (batchId) => {
             .forEach(result => {
                 const batch = batches.find(b => b.batch_code === result.batch_code);
                 const status = result.grade.toLowerCase() === 'absent' || result.grade.toLowerCase() === 'ab' || result.grade.toLowerCase() === 'a/b'
-                    ? 'Absent'
-                    : ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade)
+                ? 'Absent'
+                : (() => {
+                    const normalizedGrade = result.grade.toUpperCase().replace('_', '-');
+                    return ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(normalizedGrade)
                         ? 'Passed' 
                         : 'Failed';
+                  })();
                         
                 data.push([
                     result.subject_name,
@@ -551,7 +639,159 @@ const getBatchGradeStats = (batchId) => {
             <MdInfoOutline className="mr-2 text-indigo-600" />
             Personal Information
         </h3>
-        
+{/* Password Update Section with Toggle */}
+<div className="mt-8">
+  <div className="flex justify-between items-center mb-4">
+    <h4 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
+      <MdLock className="mr-2 text-indigo-600" />
+      Update Password
+    </h4>
+    <button 
+      onClick={() => setShowPasswordSection(!showPasswordSection)}
+      className="flex items-center text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+    >
+      {showPasswordSection ? (
+        <>
+          <span className="text-sm mr-1">Hide</span>
+          <MdExpandLess size={20} />
+        </>
+      ) : (
+        <>
+          <span className="text-sm mr-1">Show</span>
+          <MdExpandMore size={20} />
+        </>
+      )}
+    </button>
+  </div>
+
+  {showPasswordSection && (
+    <div className="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 transform transition-transform hover:scale-[1.01]">
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        handlePasswordUpdate();
+      }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showCurrentPassword ? "text" : "password"}
+                name="current_password"
+                value={passwordForm.current_password}
+                onChange={handlePasswordFormChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Enter your current password"
+                required
+              />
+              <button 
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                {showCurrentPassword ? <MdVisibilityOff className="h-5 w-5" /> : <MdVisibility className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                name="new_password"
+                value={passwordForm.new_password}
+                onChange={handlePasswordFormChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Enter new password"
+                required
+                minLength="6"
+              />
+              <button 
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                {showNewPassword ? <MdVisibilityOff className="h-5 w-5" /> : <MdVisibility className="h-5 w-5" />}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Password should be at least 6 characters
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="password_confirmation"
+                value={passwordForm.password_confirmation}
+                onChange={handlePasswordFormChange}
+                className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  passwordForm.new_password && 
+                  passwordForm.password_confirmation && 
+                  passwordForm.new_password !== passwordForm.password_confirmation 
+                    ? "border-red-300" 
+                    : "border-gray-300"
+                }`}
+                placeholder="Confirm new password"
+                required
+              />
+              <button 
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirmPassword ? <MdVisibilityOff className="h-5 w-5" /> : <MdVisibility className="h-5 w-5" />}
+              </button>
+            </div>
+            {passwordForm.new_password && 
+             passwordForm.password_confirmation && 
+             passwordForm.new_password !== passwordForm.password_confirmation && (
+              <p className="mt-1 text-xs text-red-500">
+                Passwords do not match
+              </p>
+            )}
+          </div>
+
+          <div className="md:col-span-2 flex justify-end">
+            <button
+              type="submit"
+              disabled={updatingPassword || 
+                !passwordForm.current_password || 
+                !passwordForm.new_password || 
+                !passwordForm.password_confirmation ||
+                passwordForm.new_password !== passwordForm.password_confirmation}
+              className={`px-6 py-3 rounded-md shadow text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                updatingPassword || !passwordForm.current_password || !passwordForm.new_password || 
+                !passwordForm.password_confirmation || 
+                passwordForm.new_password !== passwordForm.password_confirmation
+                  ? "bg-indigo-400 cursor-not-allowed focus:ring-indigo-400"
+                  : "bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500"
+              }`}
+            >
+              {updatingPassword ? (
+                <div className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Updating...
+                </div>
+              ) : "Update Password"}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  )}
+</div>
         {editMode ? (
             /* Edit Form */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -971,9 +1211,14 @@ const getBatchGradeStats = (batchId) => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                            ${result.grade === 'A+' || result.grade === 'A' || result.grade === 'A-' ? 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300' : 
-                                                result.grade === 'F' ? 'bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300' : 
-                                                'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-300'}`}
+                                            ${(() => {
+                                                const normalizedGrade = result.grade.toUpperCase().replace('_', '-');
+                                                return ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(normalizedGrade)
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300' 
+                                                    : result.grade.toUpperCase() === 'F' 
+                                                        ? 'bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300' 
+                                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-300';
+                                            })()}`}
                                         >
                                             {result.grade}
                                         </span>
@@ -982,15 +1227,21 @@ const getBatchGradeStats = (batchId) => {
     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
         result.grade.toLowerCase() === 'absent' || result.grade.toLowerCase() === 'ab' || result.grade.toLowerCase() === 'a/b'
             ? 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300'
-            : ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade) 
-                ? 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300' 
-                : 'bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300'
+            : (() => {
+                const normalizedGrade = result.grade.toUpperCase().replace('_', '-');
+                return ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(normalizedGrade)
+                    ? 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300' 
+                    : 'bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300';
+              })()
     }`}>
         {result.grade.toLowerCase() === 'absent' || result.grade.toLowerCase() === 'ab' || result.grade.toLowerCase() === 'a/b'
             ? 'Absent'
-            : ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(result.grade)
-                ? 'Passed' 
-                : 'Failed'}
+            : (() => {
+                const normalizedGrade = result.grade.toUpperCase().replace('_', '-');
+                return ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C'].includes(normalizedGrade)
+                    ? 'Passed' 
+                    : 'Failed';
+              })()}
     </span>
 </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

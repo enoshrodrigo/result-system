@@ -31,6 +31,11 @@ class CSVFile extends Controller
         } 
         $course_code = $jsonData['course_code'];
         $batch_code = $jsonData['batch_code'];
+        /*  batch code should contain ponly numbers and letters  */
+        if (!preg_match('/^[a-zA-Z0-9]+$/', $batch_code)) {
+            DB::rollback();
+            return 'Batch code should contain only letters and numbers';
+        }
         $exam_name = $jsonData['exam_name'];
         //check is code course is already in the database
         $course = DB::table('department_courses')->where('course_code', '=', $course_code)->first();

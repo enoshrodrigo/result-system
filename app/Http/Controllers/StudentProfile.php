@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\short_course_student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -43,8 +44,9 @@ class StudentProfile extends Controller
                 'departments.department_name',
                 'departments.department_code',
                 'short_course_status.id as status_id',
-                'short_course_status.status'
-            )
+                'short_course_status.status',
+                
+            )->orderBy('batchs.created_at', 'desc')
             ->get();
         
         // Get results and calculate statistics (reuse your existing code)
@@ -62,7 +64,7 @@ class StudentProfile extends Controller
                     'subjects.id as subject_id',
                     'subjects.subject_name',
                     'subjects.subject_code',
-                    'assign_short_course_subjects.id as assign_id'
+                    'assign_short_course_subjects.id as assign_id',
                 )
                 ->get();
             
@@ -354,4 +356,41 @@ class StudentProfile extends Controller
         if ($gpa >= 0.7) return 'D-';
         return 'F';
     }
+
+
+    public function updatePassword(Request $request)
+{
+    $studentId = session('student_id');
+    if (!$studentId) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized'
+        ], 401);
+    }
+    
+    // Validate request data
+    $validated = $request->validate([
+        'current_password' => 'required',
+        'password' => 'required|min:6|confirmed',
+    ]);
+    
+    $student = short_course_student::findOrFail($studentId);
+    
+    // Check if current password matches
+    if (!$student->password || !Hash::check($request->current_password, $student->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Current password is incorrect'
+        ], 422);
+    }
+    
+    // Update the password
+    $student->password = $request->password;
+    $student->save();
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Password updated successfully'
+    ]);
+}
 }

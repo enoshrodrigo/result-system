@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
-
+use App\Models\EmailLog;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 class StudentController extends Controller
 {
     /**
@@ -466,18 +468,51 @@ public function email(Request $request)
     }
     
     try {
-        // Send email
+        // Generate tracking ID
+        $trackingId = Str::uuid();
+        
+        // Create a log entry for tracking
+        $emailLog = EmailLog::create([
+            'student_id' => $student->id,
+            'student_name' => $student->first_name . ' ' . $student->last_name,
+            'nic' => $student->NIC_PO,
+            'email' => $student->email,
+            'subject' => $validated['subject'],
+            'email_type' => 'personal', // Type differs from results emails
+            'tracking_id' => $trackingId,
+            'status' => 'pending',
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->header('User-Agent')
+        ]);
+
+        // Send email with tracking - PASS THE BODY WITHOUT MODIFYING IT
         Mail::to($student->email)->send(new StudentEmail(
             $student,
             $validated['subject'],
-            $validated['body']
+            $validated['body'],
+            $trackingId  // Pass tracking ID to the email
         ));
+        
+        // Update the email log status to sent
+        $emailLog->status = 'sent';
+        $emailLog->save();
         
         return response()->json([
             'success' => true,
-            'message' => 'Email sent successfully'
+            'message' => 'Email sent successfully',
+            'tracking_id' => $trackingId
         ]);
     } catch (\Exception $e) {
+        // Log error with details
+        Log::error('Failed to send student email: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+        
+        // Update the email log with failure status
+        if (isset($emailLog)) {
+            $emailLog->status = 'failed';
+            $emailLog->error = $e->getMessage();
+            $emailLog->save();
+        }
+        
         return response()->json([
             'success' => false,
             'message' => 'Failed to send email: ' . $e->getMessage()

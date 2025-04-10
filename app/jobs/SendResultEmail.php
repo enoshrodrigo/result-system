@@ -1,5 +1,4 @@
 <?php
-// app/Jobs/SendResultEmail.php
 
 namespace App\Jobs;
 
@@ -10,6 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\StudentResult;
+use App\Models\EmailLog;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
@@ -51,10 +51,30 @@ class SendResultEmail implements ShouldQueue
         ];
         Cache::put("email_batch_{$this->batchId}", $progress, now()->addDay());
         
+        // Find or create the email log entry
+        $emailLog = EmailLog::firstOrCreate(
+            ['tracking_id' => $this->emailData['trackingId']],
+            [
+                'student_id' => $this->emailData['studentId'] ?? null,
+                'student_name' => $this->emailData['studentName'] ?? null,
+                'email' => $this->emailData['email'],
+                'subject' => $this->subject,
+                'status' => 'processing',
+            ]
+        );
+        
+        // Add tracking pixel to email content
+        $trackingPixel = '<img src="' . route('track.email', $this->emailData['trackingId']) . '" width="1" height="1" alt="" />';
+        $content = $this->emailData['content'] . $trackingPixel;
+        
         try {
             // Send the email
             Mail::to($this->emailData['email'])
-                ->send(new StudentResult($this->subject, $this->emailData['content']));
+                ->send(new StudentResult($this->subject, $content));
+            
+            // Update the email log
+            $emailLog->status = 'sent';
+            $emailLog->save();
             
             // Update the batch progress in cache
             $this->updateProgress(true);
@@ -62,6 +82,11 @@ class SendResultEmail implements ShouldQueue
             Log::info("Email sent to {$this->emailData['studentName']} ({$this->emailData['email']})");
             
         } catch (\Exception $e) {
+            // Update the email log
+            $emailLog->status = 'failed';
+            $emailLog->error = $e->getMessage();
+            $emailLog->save();
+            
             // Update the batch progress with failure info
             $this->updateProgress(false, $e->getMessage());
             
@@ -85,6 +110,7 @@ class SendResultEmail implements ShouldQueue
                 'studentId' => $this->emailData['studentId'],
                 'name' => $this->emailData['studentName'],
                 'email' => $this->emailData['email'],
+                'trackingId' => $this->emailData['trackingId'],
                 'error' => $errorMessage
             ];
         }
@@ -103,5 +129,16 @@ class SendResultEmail implements ShouldQueue
         
         // Store updated progress
         Cache::put("email_batch_{$this->batchId}", $progress, now()->addDay());
+        
+        // Update the operation record in the database
+        try {
+            \App\Models\EmailOperation::where('batch_id', $this->batchId)
+                ->where('operation_type', 'sendResultEmail')
+                ->update([
+                    'progress' => $progress
+                ]);
+        } catch (\Exception $e) {
+            Log::error("Error updating email operation record: {$e->getMessage()}");
+        }
     }
 }

@@ -95,7 +95,10 @@
         
         <p>Best regards,<br>BCI Campus</p>
     </div>
-    
+    <!-- At the end of your email template -->
+@if(isset($trackingId))
+<img src="{{ route('track.email', $trackingId) }}" width="1" height="1" alt="" />
+@endif
     <div class="footer">
         <p>This is an automated email. Please do not reply to this message.</p>
         <p>© {{ date('Y') }} BCI Campus. All rights reserved.</p>

@@ -531,7 +531,16 @@ const submitEmail = () => {
                               <span 
                                 key={index}
                                 title={`${batch.batch_name} - ${batch.course_name} (${batch.batch_year})`}
-                                className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 hover:underline cursor-pointer"
+                                // Add onClick to open batch results in a new tab
+                              onClick={()=> {
+                                const batchCode = batch.batch_code;
+                                const url = route('viewAllBatchResult', { batch:batchCode });
+                                window.open(url, '_blank');
+                                  toast.success(`Viewing results for ${batch.batch_code}`);
+
+                              }
+                              }
                               >
                                 {batch.batch_code}
                               </span>

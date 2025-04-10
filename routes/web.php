@@ -109,12 +109,17 @@ Route::middleware('auth','role:manager,admin')->group(function () {
 Route::get('/student/login', [StudentAuthController::class, 'showLogin'])->name('student.login');
 Route::post('/student/login', [StudentAuthController::class, 'login']);
 Route::post('/student/logout', [StudentAuthController::class, 'logout'])->name('student.logout');
+Route::get('/email-tracker/{trackingId}', [EmailController::class, 'trackEmailOpen'])->name('track.email');
 
+// Email logs API routes
+Route::get('/admin/email-logs/api', [EmailController::class, 'getLogsApi'])->name('admin.email-logs.api');
+Route::get('/admin/email-operations/{operation}/logs', [EmailController::class, 'getOperationLogs'])->name('admin.email-operations.logs');
 // Protected student routes
 Route::middleware(['student.auth'])->group(function () {
     Route::get('/student/profile', [StudentProfile::class, 'show'])->name('student.profile');
     Route::post('/student/upload-image', [StudentProfile::class, 'uploadProfileImage'])->name('student.upload-image');
     Route::get('/student/image/{path}', [StudentProfile::class, 'getImage'])->name('student.image')->where('path', '.*');
+    Route::post('/student/update-password', [StudentProfile::class, 'updatePassword'])->name('student.update-password');
 });
 require __DIR__.'/auth.php';
 

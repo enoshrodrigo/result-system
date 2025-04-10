@@ -14,15 +14,17 @@ class StudentEmail extends Mailable
     public $student;
     public $emailSubject;
     public $emailBody;
+    public $trackingId;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(short_course_student $student, string $subject, string $body)
+    public function __construct(short_course_student $student, string $subject, string $body ,string $trackingId )
     {
         $this->student = $student;
         $this->emailSubject = $subject;
         $this->emailBody = $body;
+        $this->trackingId = $trackingId;
     }
 
     /**
@@ -35,7 +37,8 @@ class StudentEmail extends Mailable
                     ->with([
                         'student' => $this->student,
                         'subject' => $this->emailSubject,
-                        'content' => $this->emailBody
+                        'content' => $this->emailBody,
+                        'trackingId' => $this->trackingId
 
                     ]);
     }

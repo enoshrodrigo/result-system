@@ -63,7 +63,10 @@
         
         <div class="footer">
             <p>This is an automated message, please do not reply to this email.</p>
-        </div>
+        </div><!-- At the end of your email template -->
+        @if(isset($trackingId))
+        <img src="{{ route('track.email', $trackingId) }}" width="1" height="1" alt="" />
+        @endif
     </div>
 </body>
 </html>

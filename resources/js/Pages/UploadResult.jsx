@@ -38,7 +38,22 @@ function UploadResult(props) {
     const toggleTemplateGenerator = () => {
         setShowTemplateGenerator(!showTemplateGenerator);
       };
-      
+      const isAlphanumeric = (str) => {
+        return /^[a-zA-Z0-9]+$/.test(str);
+      };
+
+      const handleBatchCodeInput = (e) => {
+        const value = e.target.value;
+        
+        // Only allow letters and numbers to be typed
+        if (value && !isAlphanumeric(value)) {
+            toast.error("Only letters and numbers are allowed in batch code");
+            return;
+        }
+        
+        // Continue with the validation
+        isBatchCodeAvailable(value);
+    };
     const handleFileUpload = async (file, course_code, batch_code, exam_name, batch_year) => {
         if (file) {
             setIsUploading(true);
@@ -265,6 +280,32 @@ function UploadResult(props) {
     };
 
     const isBatchCodeAvailable = async (batch_code) => {
+
+            // Clear previous validation states if empty
+    if (!batch_code) {
+        setIsValid(null);
+        setSubjectVerification({
+            isVerifying: false,
+            verifiedSubjects: [],
+            missingSubjects: [],
+            verified: false
+        });
+        return;
+    }
+    
+    // Check for special characters
+    if (!isAlphanumeric(batch_code)) {
+        setIsValid(false);
+        toast.error("Batch code must contain only letters and numbers");
+        setSubjectVerification({
+            isVerifying: false,
+            verifiedSubjects: [],
+            missingSubjects: [],
+            verified: false
+        });
+        return;
+    }
+    
         if(batch_code.length < 6 || batch_code.length > 18){
             setIsValid(false);
             setSubjectVerification({
@@ -439,23 +480,28 @@ Jane Smith,NIC789012,A+,B,PASS</pre>
                                     
                                     {/* Batch Code */}
                                     <div>
-                                        <label htmlFor="batch_code" className="block mb-2 text-sm font-medium">
-                                            Batch Code
-                                        </label>
-                                        <div className="relative">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Enter Batch Code" 
-                                                required 
-                                                id="batch_code" 
-                                                onChange={(e) => isBatchCodeAvailable(e.target.value)} 
-                                                className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 transition-colors pr-10"
-                                            />
-                                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                                <VerifyMark isValid={isValid} />
-                                            </div>
-                                        </div>
-                                    </div>
+    <label htmlFor="batch_code" className="block mb-2 text-sm font-medium">
+        Batch Code
+    </label>
+    <div className="relative">
+        <input 
+            type="text" 
+            placeholder="Enter Batch Code" 
+            required 
+            id="batch_code" 
+            onChange={(e) => handleBatchCodeInput(e)} 
+            className={`bg-gray-50 dark:bg-gray-700 border ${
+                isValid === false ? 'border-red-500' : isValid ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'
+            } text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 transition-colors pr-10`}
+        />
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <VerifyMark isValid={isValid} />
+        </div>
+    </div>
+    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        Only letters and numbers allowed (6-18 characters)
+    </p>
+</div>
                                     
                                     {/* Examination Batch Name */}
                                     <div>

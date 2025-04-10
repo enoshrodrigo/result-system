@@ -3,46 +3,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
 import { 
-  MdFilterList, 
-  MdSearch, 
-  MdRefresh, 
-  MdOutlineCheckCircle, 
-  MdErrorOutline,
-  MdOutlineCalendarToday,
-  MdDownload,
-  MdChevronLeft,
-  MdChevronRight,
-  MdPersonOutline,
-  MdEmail,
-  MdAccessTime,
-  MdInfo,
-  MdSchool,
-  MdDevices,
-  MdExpandMore,
-  MdExpandLess,
-  MdLocationOn,
-  MdDateRange,
-  MdArrowUpward,
-  MdArrowDownward,
-  MdSort,
-  MdMarkEmailRead,
-  MdMarkEmailUnread,
-  MdClass,
-  MdPersonalInjury,
-  MdSyncAlt,
-  MdTimeline,
-  MdStop,
-  MdPause,
-  MdSend,
-  MdPieChart,
-  MdInsertDriveFile,
-  MdCode,
-  MdAssignment,
-  MdGroup,
-  MdTrackChanges,
-  MdAutoAwesomeMotion,
-  MdAssessment,
-  MdDonutLarge
+  MdFilterList, MdSearch, MdRefresh, MdOutlineCheckCircle, MdErrorOutline,
+  MdOutlineCalendarToday, MdDownload, MdChevronLeft, MdChevronRight, MdPersonOutline,
+  MdEmail, MdAccessTime, MdInfo, MdSchool, MdDevices, MdExpandMore, MdExpandLess,
+  MdDateRange, MdArrowUpward, MdArrowDownward, MdSort, MdMarkEmailRead, MdMarkEmailUnread,
+  MdClass, MdSyncAlt, MdStop, MdSend, MdTrackChanges, MdAutoAwesomeMotion 
 } from 'react-icons/md';
 
 // Define tab types for easy reference
@@ -63,139 +28,207 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
   // State variables
   const [activeTab, setActiveTab] = useState(TAB_TYPES.DELIVERY);
   const [activeOperation, setActiveOperation] = useState(OPERATION_TYPES.SEND);
-  const [emailLogs, setEmailLogs] = useState(logs || []);
+  const [emailLogs, setEmailLogs] = useState(Array.isArray(logs) ? logs : []);
   const [operationLogs, setOperationLogs] = useState([]);
   const [operationDates, setOperationDates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
-  const [datesList, setDatesList] = useState(availableDates || []);
-  const [trackingType, setTrackingType] = useState('all'); // 'all', 'batch', 'result', 'personal'
+  const [datesList, setDatesList] = useState(Array.isArray(availableDates) ? availableDates : []);
+  const [trackingType, setTrackingType] = useState('all');
   const [filters, setFilters] = useState({
     status: 'all',
     opened: 'all',
     batchCode: '',
-    studentId: '',
-    email: '',
+     emailType: 'all'
   });
+  const [sortDirection, setSortDirection] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showDebug, setShowDebug] = useState(false);
   const [expandedCards, setExpandedCards] = useState({});
-  const [sortDirection, setSortDirection] = useState('desc'); // Default sort: newest first
+  const [showDebug, setShowDebug] = useState(false);
   const logsPerPage = 10;
+
+  // Fetch logs on initial load and when filters change
+  useEffect(() => {
+    if (activeTab === TAB_TYPES.OPERATIONS) {
+      fetchOperationLogs();
+    } else {
+      fetchEmailLogs();
+    }
+  }, [activeTab, activeOperation, selectedDate, trackingType]);
+
+  // Filtered logs based on search term and filters - Ensure emailLogs is an array
+  const filteredEmailLogs = useMemo(() => {
+    // Safeguard against non-array emailLogs
+    if (!Array.isArray(emailLogs)) {
+      console.warn('emailLogs is not an array:', emailLogs);
+      return [];
+    }
+
+    return emailLogs.filter(log => {
+      // Search filter
+      const searchString = (
+        (log.student_name || '') + 
+        (log.email || '') + 
+        (log.batch_code || '') + 
+        (log.batch_name || '')
+      ).toLowerCase();
+      
+      if (searchTerm && !searchString.includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+      
+      // Status filter
+      if (filters.status !== 'all' && log.status !== filters.status) {
+        return false;
+      }
+      
+      // Opened filter
+      if (filters.opened === 'opened' && !log.opened) {
+        return false;
+      } else if (filters.opened === 'unopened' && log.opened) {
+        return false;
+      }
+      
+      // Batch code filter
+      if (filters.batchCode && (!log.batch_code || !log.batch_code.toLowerCase().includes(filters.batchCode.toLowerCase()))) {
+        return false;
+      }
+        // Email type filter 
+  if (filters.emailType !== 'all' && log.email_type !== filters.emailType) {
+    return false;
+  }
+      return true;
+    }).sort((a, b) => {
+      // Sort by timestamp
+      const timestampA = a.timestamp || a.created_at || '';
+      const timestampB = b.timestamp || b.created_at || '';
+      
+      if (sortDirection === 'desc') {
+        return timestampB.localeCompare(timestampA);
+      } else {
+        return timestampA.localeCompare(timestampB);
+      }
+    });
+  }, [emailLogs, searchTerm, filters, sortDirection]);
+
+  // Filtered operation logs based on search term - Ensure operationLogs is an array
+  const filteredOperationLogs = useMemo(() => {
+    // Safeguard against non-array operationLogs
+    if (!Array.isArray(operationLogs)) {
+      console.warn('operationLogs is not an array:', operationLogs);
+      return [];
+    }
+
+    return operationLogs.filter(log => {
+      const searchString = JSON.stringify(log).toLowerCase();
+      return !searchTerm || searchString.includes(searchTerm.toLowerCase());
+    }).sort((a, b) => {
+      const timestampA = a.logged_at || '';
+      const timestampB = b.logged_at || '';
+      
+      if (sortDirection === 'desc') {
+        return timestampB.localeCompare(timestampA);
+      } else {
+        return timestampA.localeCompare(timestampB);
+      }
+    });
+  }, [operationLogs, searchTerm, sortDirection]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil((activeTab === TAB_TYPES.OPERATIONS ? filteredOperationLogs.length : filteredEmailLogs.length) / logsPerPage));
+  
+  const paginatedEmailLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * logsPerPage;
+    const endIndex = startIndex + logsPerPage;
+    return filteredEmailLogs.slice(startIndex, endIndex);
+  }, [filteredEmailLogs, currentPage, logsPerPage]);
+  
+  const paginatedOperationLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * logsPerPage;
+    const endIndex = startIndex + logsPerPage;
+    return filteredOperationLogs.slice(startIndex, endIndex);
+  }, [filteredOperationLogs, currentPage, logsPerPage]);
+
+  // Calculate tracking statistics
+  const trackingStats = useMemo(() => {
+    // Ensure we're working with arrays
+    if (!Array.isArray(filteredEmailLogs)) {
+      return {
+        total: 0, opened: 0, unopened: 0, openRate: 0,
+        result: { total: 0, opened: 0, openRate: 0 }
+      };
+    }
+
+    const total = filteredEmailLogs.length;
+    const opened = filteredEmailLogs.filter(log => log.opened).length;
+    const unopened = total - opened;
+    const openRate = total > 0 ? Math.round((opened / total) * 100) : 0;
+    
+    // Result emails stats
+    const resultEmails = filteredEmailLogs.filter(log => log.email_type === 'result');
+    const resultOpened = resultEmails.filter(log => log.opened).length;
+    const resultOpenRate = resultEmails.length > 0 ? Math.round((resultOpened / resultEmails.length) * 100) : 0;
+    
+    return {
+      total,
+      opened,
+      unopened,
+      openRate,
+      result: {
+        total: resultEmails.length,
+        opened: resultOpened,
+        openRate: resultOpenRate
+      }
+    };
+  }, [filteredEmailLogs]);
 
   // Format date for display
   const formatDate = (dateString) => {
-    try {
-      if (!dateString) return 'N/A';
-      
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString;
-      
-      return new Intl.DateTimeFormat('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }).format(date);
-    } catch (error) {
-      return dateString;
-    }
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   // Format time for display
-  const formatTime = (dateTimeString) => {
-    try {
-      if (!dateTimeString) return 'N/A';
-      
-      const timePart = dateTimeString.split(' ')[1];
-      if (!timePart) return 'N/A';
-      
-      const [hours, minutes] = timePart.split(':');
-      const hour = parseInt(hours);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const hour12 = hour % 12 || 12;
-      
-      return `${hour12}:${minutes} ${ampm}`;
-    } catch (error) {
-      return 'N/A';
-    }
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Format relative time (e.g., 2 hours ago)
-  const formatRelativeTime = (dateTimeString) => {
-    try {
-      if (!dateTimeString) return 'N/A';
-      
-      const date = new Date(dateTimeString);
-      if (isNaN(date.getTime())) return dateTimeString;
-      
-      const now = new Date();
-      const diffMs = now - date;
-      const diffSec = Math.floor(diffMs / 1000);
-      
-      if (diffSec < 60) return `${diffSec} seconds ago`;
-      if (diffSec < 3600) return `${Math.floor(diffSec / 60)} minutes ago`;
-      if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hours ago`;
-      if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} days ago`;
-      
-      return formatDate(dateTimeString);
-    } catch (error) {
-      return 'N/A';
-    }
+  // Format relative time (e.g. "2 hours ago")
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    
+    if (diffSec < 60) return `${diffSec} seconds ago`;
+    
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+    
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+    
+    const diffDay = Math.floor(diffHour / 24);
+    return `${diffDay} day${diffDay !== 1 ? 's' : ''} ago`;
   };
 
-  // Toggle expanded card
-  const toggleCardExpand = (logId) => {
-    setExpandedCards(prev => ({
-      ...prev,
-      [logId]: !prev[logId]
-    }));
-  };
-
-  // Toggle sort direction
-  const toggleSortDirection = () => {
-    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-  };
-
-  // Reset all filters
-  const resetFilters = () => {
-    setSearchTerm('');
-    setFilters({
-      status: 'all',
-      opened: 'all',
-      batchCode: '',
-      studentId: '',
-      email: '',
-    });
-    setCurrentPage(1);
-  };
-
-  // Get operation icon
-  const getOperationIcon = (operation) => {
-    switch(operation) {
+  // Get icon for an operation type
+  const getOperationIcon = (operationType) => {
+    switch(operationType) {
       case OPERATION_TYPES.SEND:
-        return <MdSend className="w-5 h-5 text-blue-500" />;
+        return <MdSend className="w-8 h-8 text-green-500" />;
       case OPERATION_TYPES.CHECK:
-        return <MdSyncAlt className="w-5 h-5 text-green-500" />;
+        return <MdSyncAlt className="w-8 h-8 text-blue-500" />;
       case OPERATION_TYPES.STOP:
-        return <MdStop className="w-5 h-5 text-red-500" />;
+        return <MdStop className="w-8 h-8 text-red-500" />;
       default:
-        return <MdInfo className="w-5 h-5 text-gray-500" />;
-    }
-  };
-
-  // Get tracking type icon
-  const getEmailTypeIcon = (type) => {
-    switch(type) {
-      case 'batch':
-        return <MdClass className="w-5 h-5 text-blue-500" />;
-      case 'result':
-        return <MdSchool className="w-5 h-5 text-green-500" />;
-      case 'personal':
-        return <MdPersonalInjury className="w-5 h-5 text-purple-500" />;
-      default:
-        return <MdEmail className="w-5 h-5 text-gray-500" />;
+        return <MdInfo className="w-8 h-8 text-gray-500" />;
     }
   };
 
@@ -222,15 +255,20 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
         type: trackingType !== 'all' ? trackingType : undefined
       }));
 
-      if (response.data.logs) {
-        setEmailLogs(response.data.logs);
+      if (response.data) {
+        // Ensure we're working with arrays
+        const logsData = response.data.logs || [];
+        setEmailLogs(Array.isArray(logsData) ? logsData : []);
         
-        if (response.data.availableDates) {
-          setDatesList(response.data.availableDates);
-        }
+        const datesData = response.data.availableDates || [];
+        setDatesList(Array.isArray(datesData) ? datesData : []);
+      } else {
+        console.warn('Invalid API response structure:', response);
+        setEmailLogs([]);
       }
     } catch (error) {
       console.error('Error fetching email logs:', error);
+      setEmailLogs([]);
     } finally {
       setLoading(false);
     }
@@ -245,215 +283,58 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
         date: selectedDate || ''
       }));
 
-      if (response.data.success) {
-        setOperationLogs(response.data.logs || []);
-        setOperationDates(response.data.availableDates || []);
+      if (response.data && response.data.success) {
+        // Ensure we're working with arrays
+        const logsData = response.data.logs || [];
+        setOperationLogs(Array.isArray(logsData) ? logsData : []);
+        
+        const datesData = response.data.availableDates || [];
+        setOperationDates(Array.isArray(datesData) ? datesData : []);
+      } else {
+        console.warn('Invalid API response structure:', response);
+        setOperationLogs([]);
       }
     } catch (error) {
-      console.error(`Error fetching ${activeOperation} logs:`, error);
+      console.error('Error fetching operation logs:', error);
+      setOperationLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load data when tab, operation, or date changes
-  useEffect(() => {
-    if (selectedDate) {
-      if (activeTab === TAB_TYPES.DELIVERY) {
-        fetchEmailLogs();
-      } else if (activeTab === TAB_TYPES.OPERATIONS) {
-        fetchOperationLogs();
-      } else if (activeTab === TAB_TYPES.TRACKING) {
-        fetchEmailLogs(); // Re-use the same endpoint but we'll process the data differently
-      }
-    }
-  }, [selectedDate, activeTab, activeOperation, trackingType]);
+  // Toggle sort direction
+  const toggleSortDirection = () => {
+    setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc');
+  };
 
-  // Set the latest date when dates list changes
-  useEffect(() => {
-    // Only set if we don't already have a selected date
-    if (!selectedDate && datesList.length > 0) {
-      // Sort dates in descending order to get the latest first
-      const sortedDates = [...datesList].sort((a, b) => new Date(b) - new Date(a));
-      const latestDate = sortedDates[0];
-      setSelectedDate(latestDate);
-    }
-  }, [datesList]);
+  // Toggle card expansion
+  const toggleCardExpand = (index) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
 
-  // Initial data load
-  useEffect(() => {
-    if (activeTab === TAB_TYPES.DELIVERY) {
-      fetchEmailLogs();
-    } else if (activeTab === TAB_TYPES.OPERATIONS) {
-      fetchOperationLogs();
-    }
-  }, []);
-
-  // Filter logs based on search and filter criteria
-  const filteredEmailLogs = useMemo(() => {
-    // First filter the logs
-    const filtered = emailLogs.filter(log => {
-      if (!log) return false;
-      
-      // Search term filter
-      const searchTermLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        !searchTerm || 
-        (log.student_name && log.student_name.toLowerCase().includes(searchTermLower)) ||
-        (log.email && log.email.toLowerCase().includes(searchTermLower)) ||
-        (log.batch_code && log.batch_code.toLowerCase().includes(searchTermLower)) ||
-        (log.batch_name && log.batch_name.toLowerCase().includes(searchTermLower));
-
-      // Status filter
-      const matchesStatus = 
-        filters.status === 'all' || 
-        log.status === filters.status;
-        
-      // Opened status filter
-      const matchesOpened = 
-        filters.opened === 'all' || 
-        (filters.opened === 'opened' && log.opened === true) ||
-        (filters.opened === 'unopened' && log.opened === false);
-
-      // Batch code filter
-      const matchesBatchCode = 
-        !filters.batchCode || 
-        (log.batch_code && log.batch_code.includes(filters.batchCode));
-
-      // Student ID filter
-      const matchesStudentId = 
-        !filters.studentId || 
-        (log.student_id && log.student_id.toString() === filters.studentId);
-
-      // Email filter
-      const matchesEmail = 
-        !filters.email || 
-        (log.email && log.email.includes(filters.email));
-        
-      // Email type filter (for tracking tab)
-      const matchesType = 
-        trackingType === 'all' || 
-        (log.email_type === trackingType);
-
-      return matchesSearch && matchesStatus && matchesOpened &&
-             matchesBatchCode && matchesStudentId && matchesEmail && matchesType;
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      status: 'all',
+      opened: 'all',
+      batchCode: '',
+      emailType: 'all' 
     });
-    
-    // Then sort according to the current sort direction
-    return [...filtered].sort((a, b) => {
-      const dateA = new Date(a.timestamp || 0);
-      const dateB = new Date(b.timestamp || 0);
-      
-      if (sortDirection === 'asc') {
-        return dateA - dateB; // Ascending: oldest first
-      } else {
-        return dateB - dateA; // Descending: newest first
-      }
-    });
-  }, [emailLogs, searchTerm, filters, sortDirection, trackingType]);
-
-  // Filter operation logs based on search
-  const filteredOperationLogs = useMemo(() => {
-    if (!operationLogs || operationLogs.length === 0) return [];
-    
-    const filtered = operationLogs.filter(log => {
-      if (!log) return false;
-      
-      // Simple search on any field
-      const searchTermLower = searchTerm.toLowerCase();
-      if (!searchTerm) return true;
-      
-      // Convert entire log to string and search
-      const logString = JSON.stringify(log).toLowerCase();
-      return logString.includes(searchTermLower);
-    });
-    
-    // Sort by logged_at timestamp
-    return [...filtered].sort((a, b) => {
-      const dateA = new Date(a.logged_at || 0);
-      const dateB = new Date(b.logged_at || 0);
-      
-      if (sortDirection === 'asc') {
-        return dateA - dateB;
-      } else {
-        return dateB - dateA;
-      }
-    });
-  }, [operationLogs, searchTerm, sortDirection]);
-
-  // Email tracking statistics
-  const trackingStats = useMemo(() => {
-    const stats = {
-      total: filteredEmailLogs.length,
-      opened: filteredEmailLogs.filter(log => log.opened).length,
-      unopened: filteredEmailLogs.filter(log => !log.opened).length,
-      
-      // Stats by email type
-      batch: {
-        total: filteredEmailLogs.filter(log => log.email_type === 'batch').length,
-        opened: filteredEmailLogs.filter(log => log.email_type === 'batch' && log.opened).length
-      },
-      result: {
-        total: filteredEmailLogs.filter(log => log.email_type === 'result').length,
-        opened: filteredEmailLogs.filter(log => log.email_type === 'result' && log.opened).length
-      },
-      personal: {
-        total: filteredEmailLogs.filter(log => log.email_type === 'personal').length,
-        opened: filteredEmailLogs.filter(log => log.email_type === 'personal' && log.opened).length
-      }
-    };
-    
-    // Calculate open rates
-    stats.openRate = stats.total > 0 ? (stats.opened / stats.total * 100).toFixed(1) : 0;
-    stats.batch.openRate = stats.batch.total > 0 ? (stats.batch.opened / stats.batch.total * 100).toFixed(1) : 0;
-    stats.result.openRate = stats.result.total > 0 ? (stats.result.opened / stats.result.total * 100).toFixed(1) : 0;
-    stats.personal.openRate = stats.personal.total > 0 ? (stats.personal.opened / stats.personal.total * 100).toFixed(1) : 0;
-    
-    return stats;
-  }, [filteredEmailLogs]);
-
-  // Pagination logic
-  const paginatedEmailLogs = useMemo(() => {
-    const totalPages = Math.ceil(filteredEmailLogs.length / logsPerPage);
-    
-    // Ensure current page is valid
-    const validCurrentPage = Math.min(Math.max(1, currentPage), Math.max(1, totalPages));
-    if (validCurrentPage !== currentPage) {
-      setCurrentPage(validCurrentPage);
-    }
-    
-    return filteredEmailLogs.slice(
-      (validCurrentPage - 1) * logsPerPage, 
-      validCurrentPage * logsPerPage
-    );
-  }, [filteredEmailLogs, currentPage, logsPerPage]);
-
-  const paginatedOperationLogs = useMemo(() => {
-    const totalPages = Math.ceil(filteredOperationLogs.length / logsPerPage);
-    
-    // Ensure current page is valid
-    const validCurrentPage = Math.min(Math.max(1, currentPage), Math.max(1, totalPages));
-    if (validCurrentPage !== currentPage) {
-      setCurrentPage(validCurrentPage);
-    }
-    
-    return filteredOperationLogs.slice(
-      (validCurrentPage - 1) * logsPerPage, 
-      validCurrentPage * logsPerPage
-    );
-  }, [filteredOperationLogs, currentPage, logsPerPage]);
-
-  // Total pages calculation
-  const totalPages = useMemo(() => {
-    if (activeTab === TAB_TYPES.DELIVERY || activeTab === TAB_TYPES.TRACKING) {
-      return Math.max(1, Math.ceil(filteredEmailLogs.length / logsPerPage));
-    } else {
-      return Math.max(1, Math.ceil(filteredOperationLogs.length / logsPerPage));
-    }
-  }, [activeTab, filteredEmailLogs, filteredOperationLogs, logsPerPage]);
+    setSearchTerm('');
+  };
 
   // Export logs to CSV
   const exportToCSV = () => {
+    const logsToExport = activeTab === TAB_TYPES.OPERATIONS ? filteredOperationLogs : filteredEmailLogs;
+    
+    if (!Array.isArray(logsToExport) || logsToExport.length === 0) {
+      alert('No logs to export');
+      return;
+    }
+    
     let csvContent = "data:text/csv;charset=utf-8,";
     let filename = '';
     
@@ -465,76 +346,66 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
         
         const [date, time] = log.timestamp.split(' ');
         const openedAt = log.opened_at ? formatDate(log.opened_at) + ' ' + formatTime(log.opened_at) : 'N/A';
+        
         csvContent += `${date},${time},${log.student_id || ''},"${log.student_name || ''}",${log.email || ''},${log.batch_code || ''},"${log.batch_name || ''}",${log.status || ''},${log.email_type || 'N/A'},${log.opened ? 'Yes' : 'No'},${openedAt},${log.ip_address || ''}\n`;
       });
       
       filename = `email-delivery-logs-${selectedDate || new Date().toISOString().split('T')[0]}.csv`;
     } 
     else if (activeTab === TAB_TYPES.OPERATIONS) {
-      // Headers depend on operation type
       if (activeOperation === OPERATION_TYPES.SEND) {
         csvContent += "Timestamp,Batch ID,Subject,Batch Code,Email Count,IP Address\n";
         
         filteredOperationLogs.forEach(log => {
           if (!log || !log.logged_at) return;
           
-          csvContent += `${log.logged_at},${log.batchId || ''},"${log.subject || ''}",${log.batchCode || ''},${log.emailCount || ''},${log.ipAddress || ''}\n`;
+          csvContent += `${log.logged_at || ''},${log.batch_id || ''},"${log.subject || ''}",${log.batch_code || ''},${log.email_count || 0},${log.ip_address || ''}\n`;
         });
-      } 
-      else if (activeOperation === OPERATION_TYPES.CHECK) {
-        csvContent += "Timestamp,Batch ID,Progress Total,Progress Sent,Progress Failed,Completed,IP Address\n";
+      } else {
+        csvContent += "Timestamp,Batch ID,Operation Type,IP Address\n";
         
         filteredOperationLogs.forEach(log => {
           if (!log || !log.logged_at) return;
           
-          const progress = log.progress || {};
-          csvContent += `${log.logged_at},${log.batchId || ''},${progress.total || 0},${progress.sent || 0},${progress.failed || 0},${progress.completed ? 'Yes' : 'No'},${log.ipAddress || ''}\n`;
-        });
-      }
-      else if (activeOperation === OPERATION_TYPES.STOP) {
-        csvContent += "Timestamp,Batch ID,Stopped At,Progress Total,Progress Sent,Progress Failed,IP Address\n";
-        
-        filteredOperationLogs.forEach(log => {
-          if (!log || !log.logged_at) return;
-          
-          const progress = log.progress || {};
-          csvContent += `${log.logged_at},${log.batchId || ''},${progress.stoppedAt || ''},${progress.total || 0},${progress.sent || 0},${progress.failed || 0},${log.ipAddress || ''}\n`;
+          csvContent += `${log.logged_at || ''},${log.batch_id || ''},${log.operation_type || ''},${log.ip_address || ''}\n`;
         });
       }
       
-      filename = `email-operation-${activeOperation}-${selectedDate || new Date().toISOString().split('T')[0]}.csv`;
+      filename = `email-operations-${activeOperation}-${selectedDate || new Date().toISOString().split('T')[0]}.csv`;
     }
     else if (activeTab === TAB_TYPES.TRACKING) {
-      csvContent += "Date,Time,Student ID,Student Name,Email,Email Type,Opened,Opened At,IP Address\n";
+      csvContent += "Date,Time,Student Name,Email,Batch Code,Opened,Opened At,IP Address,Tracking ID\n";
       
       filteredEmailLogs.forEach(log => {
         if (!log || !log.timestamp) return;
         
         const [date, time] = log.timestamp.split(' ');
         const openedAt = log.opened_at ? formatDate(log.opened_at) + ' ' + formatTime(log.opened_at) : 'N/A';
-        csvContent += `${date},${time},${log.student_id || ''},"${log.student_name || ''}",${log.email || ''},${log.email_type || 'N/A'},${log.opened ? 'Yes' : 'No'},${openedAt},${log.ip_address || ''}\n`;
+        
+        csvContent += `${date},${time},"${log.student_name || ''}",${log.email || ''},${log.batch_code || ''},${log.opened ? 'Yes' : 'No'},${openedAt},${log.opened_ip_address || ''},${log.tracking_id || ''}\n`;
       });
       
       filename = `email-tracking-${trackingType}-${selectedDate || new Date().toISOString().split('T')[0]}.csv`;
     }
     
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", filename);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
-    
     link.click();
     document.body.removeChild(link);
   };
 
-  // Switch tabs
+  // Handle tab change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setCurrentPage(1);
     setSearchTerm('');
     setExpandedCards({});
   };
+
+  // The rest of your component remains the same...
 
   // Switch operation types
   const handleOperationChange = (operation) => {
@@ -560,7 +431,6 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
       
       <div className="py-12">
         <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-          {/* Debug Info - Toggleable */}
           <div className="mb-6">
             <button 
               onClick={() => setShowDebug(!showDebug)}
@@ -607,27 +477,11 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                     <p className="text-sm text-purple-700">Sort direction: <span className="font-mono bg-white px-2 py-0.5 rounded">{sortDirection}</span></p>
                   </div>
                 </div>
-                
-                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-4 shadow-sm border border-yellow-100 md:col-span-3">
-                  <h3 className="font-bold text-amber-800 flex items-center mb-2">
-                    <MdInfo className="mr-2" /> Raw Log Data
-                  </h3>
-                  <div className="bg-white p-2 rounded-md overflow-auto max-h-60">
-                    <pre className="text-xs text-gray-700">
-                      {activeTab === TAB_TYPES.OPERATIONS
-                        ? JSON.stringify(paginatedOperationLogs, null, 2)
-                        : JSON.stringify(paginatedEmailLogs, null, 2)
-                      }
-                    </pre>
-                  </div>
-                </div>
               </div>
             )}
           </div>
 
-          {/* Main Container */}
           <div className="bg-white dark:bg-gray-800 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-            {/* Tab Navigation */}
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex flex-wrap gap-2">
                 <button
@@ -668,7 +522,6 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
               </div>
             </div>
             
-            {/* Tab Content Header */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 space-y-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h3 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
@@ -777,20 +630,6 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                     </div>
                   </button>
                   
-                {/*   <button
-                    onClick={() => handleTrackingTypeChange('batch')}
-                    className={`py-3 px-6 font-medium text-sm focus:outline-none whitespace-nowrap ${
-                      trackingType === 'batch'
-                        ? 'border-b-2 border-purple-500 text-purple-600 dark:text-purple-400'
-                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <MdClass className="mr-1.5" />
-                      <span>Batch Results</span>
-                    </div>
-                  </button> */}
-                  
                   <button
                     onClick={() => handleTrackingTypeChange('result')}
                     className={`py-3 px-6 font-medium text-sm focus:outline-none whitespace-nowrap ${
@@ -804,24 +643,10 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                       <span>Student Results</span>
                     </div>
                   </button>
-                  
-            {/*       <button
-                    onClick={() => handleTrackingTypeChange('personal')}
-                    className={`py-3 px-6 font-medium text-sm focus:outline-none whitespace-nowrap ${
-                      trackingType === 'personal'
-                        ? 'border-b-2 border-purple-500 text-purple-600 dark:text-purple-400'
-                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <MdPersonalInjury className="mr-1.5" />
-                      <span>Personal Emails</span>
-                    </div>
-                  </button> */}
                 </div>
               )}
               
-              {/* Stats Section - Different for each tab */}
+              {/* Stats Section - For tracking tab */}
               {activeTab === TAB_TYPES.TRACKING && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                   <div className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
@@ -846,25 +671,9 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                 </div>
               )}
               
-              {/* Type-specific stats for tracking tab */}
+              {/* Email type stats - For tracking tab */}
               {activeTab === TAB_TYPES.TRACKING && trackingType === 'all' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-           {/*        <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg shadow-sm border border-blue-200 dark:border-blue-700">
-                    <div className="flex items-center mb-2">
-                      <MdClass className="text-blue-600 dark:text-blue-400 mr-2" />
-                      <h4 className="text-sm font-medium text-blue-700 dark:text-blue-300">Batch Results</h4>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xl font-bold text-blue-800 dark:text-blue-200">{trackingStats.batch.total} emails</p>
-                        <p className="text-sm text-blue-600 dark:text-blue-400">{trackingStats.batch.opened} opened ({trackingStats.batch.openRate}%)</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-full bg-blue-200 dark:bg-blue-700 flex items-center justify-center">
-                        <span className="text-blue-800 dark:text-blue-200 font-bold">{trackingStats.batch.openRate}%</span>
-                      </div>
-                    </div>
-                  </div> */}
-                  
                   <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-lg shadow-sm border border-green-200 dark:border-green-700">
                     <div className="flex items-center mb-2">
                       <MdSchool className="text-green-600 dark:text-green-400 mr-2" />
@@ -880,22 +689,6 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                       </div>
                     </div>
                   </div>
-                  
-        {/*           <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-lg shadow-sm border border-purple-200 dark:border-purple-700">
-                    <div className="flex items-center mb-2">
-                      <MdPersonalInjury className="text-purple-600 dark:text-purple-400 mr-2" />
-                      <h4 className="text-sm font-medium text-purple-700 dark:text-purple-300">Personal Emails</h4>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xl font-bold text-purple-800 dark:text-purple-200">{trackingStats.personal.total} emails</p>
-                        <p className="text-sm text-purple-600 dark:text-purple-400">{trackingStats.personal.opened} opened ({trackingStats.personal.openRate}%)</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-full bg-purple-200 dark:bg-purple-700 flex items-center justify-center">
-                        <span className="text-purple-800 dark:text-purple-200 font-bold">{trackingStats.personal.openRate}%</span>
-                      </div>
-                    </div>
-                  </div> */}
                 </div>
               )}
               
@@ -924,7 +717,6 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                     </select>
                   </div>
                   
-                  {/* Sort Order Toggle */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Time Sort Order:
@@ -967,77 +759,89 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
               
               {/* Filters - Only for Email Delivery and Tracking tabs */}
               {(activeTab === TAB_TYPES.DELIVERY || activeTab === TAB_TYPES.TRACKING) && (
-                <div className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm mt-4">
-                  <div className="flex items-center mb-3">
-                    <MdFilterList className="mr-2 text-blue-500" />
-                    <span className="text-gray-700 dark:text-gray-300 font-medium">Advanced Filters:</span>
-                    
-                    <button
-                      onClick={resetFilters}
-                      className="ml-auto text-blue-600 dark:text-blue-400 text-sm hover:underline flex items-center"
-                      disabled={loading}
-                    >
-                      Reset Filters
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Status Filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                      <select
-                        value={filters.status}
-                        onChange={(e) => setFilters({...filters, status: e.target.value})}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={loading}
-                      >
-                        <option value="all">All Statuses</option>
-                        <option value="sent">Sent</option>
-                        <option value="failed">Failed</option>
-                        <option value="pending">Pending</option>
-                      </select>
-                    </div>
-                    
-                    {/* Opened Filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opened Status</label>
-                      <select
-                        value={filters.opened}
-                        onChange={(e) => setFilters({...filters, opened: e.target.value})}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={loading}
-                      >
-                        <option value="all">All</option>
-                        <option value="opened">Opened</option>
-                        <option value="unopened">Not Opened</option>
-                      </select>
-                    </div>
-                    
-                    {/* Batch Code Filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Batch Code</label>
-                      <input
-                        type="text"
-                        value={filters.batchCode}
-                        onChange={(e) => setFilters({...filters, batchCode: e.target.value})}
-                        placeholder="Enter batch code"
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+  <div className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm mt-4">
+    <div className="flex items-center mb-3">
+      <MdFilterList className="mr-2 text-blue-500" />
+      <span className="text-gray-700 dark:text-gray-300 font-medium">Advanced Filters:</span>
+      
+      <button
+        onClick={resetFilters}
+        className="ml-auto text-blue-600 dark:text-blue-400 text-sm hover:underline flex items-center"
+        disabled={loading}
+      >
+        Reset Filters
+      </button>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">  {/* Change from grid-cols-3 to grid-cols-4 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters({...filters, status: e.target.value})}
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          disabled={loading}
+        >
+          <option value="all">All Statuses</option>
+          <option value="sent">Sent</option>
+          <option value="failed">Failed</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opened Status</label>
+        <select
+          value={filters.opened}
+          onChange={(e) => setFilters({...filters, opened: e.target.value})}
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          disabled={loading}
+        >
+          <option value="all">All</option>
+          <option value="opened">Opened</option>
+          <option value="unopened">Not Opened</option>
+        </select>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Batch Code</label>
+        <input
+          type="text"
+          value={filters.batchCode}
+          onChange={(e) => setFilters({...filters, batchCode: e.target.value})}
+          placeholder="Enter batch code"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          disabled={loading}
+        />
+      </div>
+      
+      {/* Add this new Email Type filter */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Type</label>
+        <select
+          value={filters.emailType}
+          onChange={(e) => setFilters({...filters, emailType: e.target.value})}
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          disabled={loading}
+        >
+          <option value="all">All Types</option>
+          <option value="batch">Batch Results</option>
+          <option value="result">Student Results</option>
+          <option value="personal">Personal Emails</option>
+        </select>
+      </div>
+    </div>
+  </div>
+)}
             </div>
             
-            {/* Main Content Area with Logs */}
+            {/* Main Content Area */}
             <div className="p-6">
               {loading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               ) : activeTab === TAB_TYPES.OPERATIONS ? (
-                // Operations Logs Display
                 operationLogs.length === 0 ? (
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">
                     <MdInfo className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -1064,19 +868,21 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                             <div>
                               <h4 className="font-medium text-gray-800 dark:text-gray-200">
                                 {activeOperation === OPERATION_TYPES.SEND ? log.subject || 'Send Email Operation' : 
-                                 activeOperation === OPERATION_TYPES.CHECK ? `Progress Check (${log.batchId || 'Unknown'})` :
-                                 activeOperation === OPERATION_TYPES.STOP ? `Stop Process (${log.batchId || 'Unknown'})` : 
+                                 activeOperation === OPERATION_TYPES.CHECK ? `Progress Check (${log.batch_id || 'Unknown'})` :
+                                 activeOperation === OPERATION_TYPES.STOP ? `Stop Process (${log.batch_id || 'Unknown'})` : 
                                  'Email Operation'}
                               </h4>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {log.logged_at ? formatRelativeTime(log.logged_at) : 'Unknown time'}
-                              </p>
+  {log.created_at 
+    ? (formatRelativeTime(log.created_at) || formatDate(log.created_at) + ' ' + formatTime(log.created_at))
+    : 'Unknown time'}
+</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
                             {activeOperation === OPERATION_TYPES.SEND && (
                               <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                {log.emailCount || 0} emails
+                                {log.email_count || 0} emails
                               </span>
                             )}
                             {activeOperation === OPERATION_TYPES.CHECK && log.progress && (
@@ -1107,7 +913,6 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                   </div>
                 )
               ) : (
-                // Email Delivery or Tracking Logs Display
                 filteredEmailLogs.length === 0 ? (
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 text-center">
                     <MdInfo className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -1160,13 +965,17 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {log.timestamp ? formatDate(log.timestamp.split(' ')[0]) : 'Unknown date'}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {log.timestamp ? formatTime(log.timestamp) : 'Unknown time'}
-                              </p>
-                            </div>
+  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+    {(log.timestamp || log.created_at) 
+      ? formatDate((log.timestamp || log.created_at).split(' ')[0]) 
+      : 'Unknown date'}
+  </p>
+  <p className="text-xs text-gray-500 dark:text-gray-400">
+    {(log.timestamp || log.created_at) 
+      ? formatTime(log.timestamp || log.created_at) 
+      : 'Unknown time'}
+  </p>
+</div>
                           </div>
                           
                           <div className="mt-2 flex flex-wrap gap-2">
@@ -1251,15 +1060,6 @@ export default function EmailLogsViewer({ auth, logs = [], availableDates = [] }
                                     </li>
                                   )}
                                 </ul>
-                              </div>
-                            </div>
-                            
-                            <div className="mt-2">
-                              <h5 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Raw Log Data</h5>
-                              <div className="bg-gray-50 dark:bg-gray-700 rounded p-3 overflow-auto max-h-32">
-                                <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                                  {JSON.stringify(log, null, 2)}
-                                </pre>
                               </div>
                             </div>
                           </div>

@@ -26,6 +26,7 @@
         "@heroicons/react": "^2.2.0",
         "@inertiajs/inertia-react": "^0.8.1",
         "date-fns": "^4.1.0",
+        "framer-motion": "^12.6.3",
         "html2pdf.js": "^0.10.2",
         "laravel-echo": "^2.0.2",
         "papaparse": "^5.4.1",
