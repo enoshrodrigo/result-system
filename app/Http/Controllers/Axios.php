@@ -211,7 +211,7 @@ public function viewAllBatchResult(Request $request)
                 $join->on('short_course_students.id', '=', 'short_course_status.status_student_id')
                     ->where('short_course_status.status_batch_course_id', '=', $batch->id);
             })
-            ->select('short_course_students.id', 'short_course_students.first_name', 'short_course_students.NIC_PO', 'short_course_status.status', 'short_course_students.email')
+            ->select('short_course_students.id', 'short_course_students.first_name', 'short_course_students.NIC_PO', 'short_course_status.status', 'short_course_students.email','short_course_status.student_profile_view')
             ->get();
 
         $studentAndSubject = [];
@@ -232,7 +232,9 @@ public function viewAllBatchResult(Request $request)
                 "first_name" => $student->first_name,
                 "subjects" => $subjects,
                 "email" => $student->email,
-                "status" => $student->status
+                "status" => $student->status,
+                "student_profile_view" => $student->student_profile_view,
+
             ];
 
             $studentAndSubject[] = $array;
@@ -247,6 +249,7 @@ public function viewAllBatchResult(Request $request)
             "batch_name" => $batch->batch_name,
             "batch_year" => $batch->batch_year,
             "status" => $status ? $status->live : false,
+            "status_profile_view" => $status ? $status->profile_view : false,
             "batchSubjects" => $batchSubjects,
             "total_students" => $total_students,
             "released_date" => $released_date
@@ -459,4 +462,97 @@ public function updateStatus(Request $request) {
 }
 
 
+ 
+public function toggleProfileView(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'student_id' => 'required',
+            'batch_code' => 'required',
+            'profile_view' => 'required|boolean'
+        ]);
+//find batch id by batch code
+        $batch = batchs::where('batch_code', $validated['batch_code'])->first();
+        if (!$batch) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found'
+            ], 404);
+        }
+//find student id by student nic
+        $student = DB::table('short_course_students')->where('NIC_PO', $validated['student_id'])->first();
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found'
+            ], 404);
+        }
+ 
+        // Find all results for this student in this batch and update them
+        $updated = short_course_statu::where('status_student_id', $student->id)
+            ->where('status_batch_course_id',  $batch->id)
+            ->update(['student_profile_view' => $validated['profile_view']]);
+
+        if ($updated) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile view setting updated successfully'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No results found for this student in this batch'
+        ]);
+    } catch (Exception $e) {
+        //Log the error message for debugging
+        \Log::error('Failed to update profile view setting: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update profile view setting: ' . $e->getMessage()
+        ]);
+    }
+}
+
+public function toggleProfileBatch(Request $request)
+{
+    try {
+        $validated = $request->validate([ 
+            'batch_code' => 'required',
+            'profile_view' => 'required|boolean'
+        ]);
+//find batch id by batch code
+        $batch = batchs::where('batch_code', $validated['batch_code'])->first();
+        if (!$batch) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found'
+            ], 404);
+        }
+ 
+ 
+        // Find all results for this student in this batch and update them
+        $updated = short_course_result_live::where('short_batch_course_id',  $batch->id)
+            ->update(['profile_view' => $validated['profile_view']]);
+
+        if ($updated) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch profile view setting updated successfully'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No results found for this in this batch'
+        ]);
+    } catch (Exception $e) {
+        //Log the error message for debugging
+        \Log::error('Failed to update Batch profile view setting: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update Batch profile view setting: ' . $e->getMessage()
+        ]);
+    }
+}
 }

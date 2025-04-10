@@ -36,6 +36,7 @@
         "react-quill": "^2.0.0",
         "react-router-dom": "^6.20.0",
         "react-snowfall": "^2.2.0",
-        "react-to-print": "^2.15.1"
+        "react-to-print": "^2.15.1",
+        "xlsx": "^0.18.5"
     }
 }

@@ -72,58 +72,58 @@ Route::middleware('auth','role:admin')->group(function () {
                 ->name('logout');
                  
 
-    Route::post('get/short/courses',[Axios::class,'getCourses'])->name('getcourses');
-    Route::post('get/levels',[Axios::class,'getLevels'])->name('getlevels');
-    Route::post('get/all/short-courses',[Axios::class,'getAllShortCourses'])->name('allShortcourses');
-    Route::post('get/all/subjects',[Axios::class,'Shortsubjects'])->name('reqsubjects');
+    Route::post('/admin/get/short/courses',[Axios::class,'getCourses'])->name('getcourses');
+    Route::post('/admin/get/levels',[Axios::class,'getLevels'])->name('getlevels');
+    Route::post('/admin/get/all/short-courses',[Axios::class,'getAllShortCourses'])->name('allShortcourses');
+    Route::post('/admin/get/all/subjects',[Axios::class,'Shortsubjects'])->name('reqsubjects');
 
 
     // Route::post('get/semorintake',[Axios::class,'semorintake'])->name('semorintake');
-    Route::post('get/subject',[Axios::class,'getsubjects'])->name('subjects');
+    Route::post('/admin/get/subject',[Axios::class,'getsubjects'])->name('subjects');
 
 
-    Route::post('add/shortCourse',[AddBatchsAndSubs::class,'addShortCourse'])->name('addShortCourse');
+    Route::post('/admin/add/shortCourse',[AddBatchsAndSubs::class,'addShortCourse'])->name('addShortCourse');
 
-    Route::post('get/get_short_course_result_live',[Axios::class,'get_short_course_result_lives'])->name('shortlive');
-    Route::post('get/get_short_course_result_lives/update',[Axios::class,'ShortCourseUpdateLive'])->name('ShortCourseUpdateLive');
+    Route::post('/admin/get/get_short_course_result_live',[Axios::class,'get_short_course_result_lives'])->name('shortlive');
+    Route::post('/admin/get/get_short_course_result_lives/update',[Axios::class,'ShortCourseUpdateLive'])->name('ShortCourseUpdateLive');
 
-    Route::post('delete/batch',[DeleteRequets::class,'deleteBatch'])->name('deleteBatch');
+    Route::post('/admin/delete/batch',[DeleteRequets::class,'deleteBatch'])->name('deleteBatch');
     
    
-    Route::post('get/updatesubject-status',[Axios::class,'updatesubject'])->name('updatesubject');
+    Route::post('/admin/get/updatesubject-status',[Axios::class,'updatesubject'])->name('updatesubject');
    
 
 
-    Route::post('/get/batchcode', [Axios::class, 'checkBatchCode'])->name('checkBatchCode');
-    Route::post('put/result',[CSVFile::class,'uploadjson'])->name('uploadjson');
+    Route::post('/admin/get/batchcode', [Axios::class, 'checkBatchCode'])->name('checkBatchCode');
+    Route::post('/admin/put/result',[CSVFile::class,'uploadjson'])->name('uploadjson');
 
 
 
 
- Route::post('put/updateGrade',[Axios::class,'updateGrade'])->name('updateGrade');
+ Route::post('/admin/put/updateGrade',[Axios::class,'updateGrade'])->name('updateGrade');
  /* Delete result for one studnt */
-    Route::post('delete/result',[DeleteRequets::class,'deleteResult'])->name('deleteResult');
+    Route::post('/admin/delete/result',[DeleteRequets::class,'deleteResult'])->name('deleteResult');
     /* Add studnt to batch with subjects*/
-    Route::post('/update-batch', [Axios::class, 'updateBatch'])->name('updateBatch');
-    Route::post('add/student',[AddBatchsAndSubs::class,'addStudentBatch'])->name('addStudentBatch');
-    Route::post('put/updateStatus',[Axios::class,'updateStatus'])->name('updateStatus');
+    Route::post('/admin/update-batch', [Axios::class, 'updateBatch'])->name('updateBatch');
+    Route::post('/admin/add/student',[AddBatchsAndSubs::class,'addStudentBatch'])->name('addStudentBatch');
+    Route::post('/admin/put/updateStatus',[Axios::class,'updateStatus'])->name('updateStatus');
   
     /* verifySubjects */
   
-    Route::post('verify/subjects',[AddBatchsAndSubs::class,'verifySubjects'])->name('verifySubjects');
+    Route::post('/admin/verify/subjects',[AddBatchsAndSubs::class,'verifySubjects'])->name('verifySubjects');
     
-    Route::post('/send-result-email', [EmailController::class, 'sendResultEmail'])->name('sendResultEmail');
-    Route::get('/check-email-progress/{batchId}', [EmailController::class, 'checkEmailProgress'])->name('checkEmailProgress');
-    Route::post('/stop-email-process', [EmailController::class, 'stopEmailProcess'])
+    Route::post('/admin/send-result-email', [EmailController::class, 'sendResultEmail'])->name('sendResultEmail');
+    Route::get('/admin/check-email-progress/{batchId}', [EmailController::class, 'checkEmailProgress'])->name('checkEmailProgress');
+    Route::post('/admin/stop-email-process', [EmailController::class, 'stopEmailProcess'])
     ->name('stopEmailProcess');
 });
 
 Route::middleware('auth','role:manager,admin')->group(function () {
      Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
                 ->name('logout');
-    Route::post('add/subject',[AddBatchsAndSubs::class,'addSubject'])->name('addSubject');
-    Route::post('get/all-subject-status',[Axios::class,'allsubjectsStatus'])->name('allsubjectstatus');
-    Route::post('/updatesubject', [AddBatchsAndSubs::class, 'updateSubject'])->name('updatesubject'); 
-    Route::post('delete/subject',[DeleteRequets::class,'deletesubject'])->name('deletesubject');
+    Route::post('/admin/add/subject',[AddBatchsAndSubs::class,'addSubject'])->name('addSubject');
+    Route::post('/admin/get/all-subject-status',[Axios::class,'allsubjectsStatus'])->name('allsubjectstatus');
+    Route::post('/admin/updatesubject', [AddBatchsAndSubs::class, 'updateSubject'])->name('updatesubject'); 
+    Route::post('/admin/delete/subject',[DeleteRequets::class,'deletesubject'])->name('deletesubject');
     
 });

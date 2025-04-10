@@ -233,8 +233,12 @@ class StudentController extends Controller
             'NIC_PO' => 'required|string|unique:short_course_students,NIC_PO|max:50',
             'email' => 'nullable|email|max:255',
             'mobile_number' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:6',
         ]);
-        
+           // Hash password if provided
+    if (isset($validated['password']) && !empty($validated['password'])) {
+        $validated['password'] = $validated['password'];
+    }
         short_course_student::create($validated);
         
         return redirect()->route('students.index')->with('success', 'Student added successfully!');
@@ -251,7 +255,16 @@ class StudentController extends Controller
             'NIC_PO' => "required|string|max:50|unique:short_course_students,NIC_PO,{$student->id}",
             'email' => 'nullable|email|max:255',
             'mobile_number' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:6',
         ]);
+            
+    // Only update password if provided
+    if (isset($validated['password']) && !empty($validated['password'])) {
+        $validated['password'] = $validated['password'];
+    } else {
+        // Don't update the password if not provided
+        unset($validated['password']);
+    }
         
         $student->update($validated);
         

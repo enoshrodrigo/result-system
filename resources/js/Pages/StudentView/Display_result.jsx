@@ -336,12 +336,12 @@ const handleSendEmailRequest = async () => {
     </label>
     
     {/* Add warning message when checkbox is checked */}
-    {saveEmail && (
+ {/*    {saveEmail && (
       <div className="mt-2 text-red-600 text-sm bg-red-50 p-2 rounded border border-red-200">
         <strong>Important:</strong> Once saved, this email address cannot be changed without contacting the Result Department. 
         <p className="mt-1">If this is just for one-time use, uncheck the box above.</p>
       </div>
-    )}
+    )} */}
   </div>
 )}
             

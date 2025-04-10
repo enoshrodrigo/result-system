@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
 import { 
@@ -13,13 +13,15 @@ import {
   MdChevronLeft,
   MdChevronRight,
   MdRefresh,
-  MdEmail 
+  MdEmail ,
+  MdVisibility, 
+  MdVisibilityOff
 } from "react-icons/md";
 import axios from "axios";
 /* Import toast */
 import toast, { Toaster } from "react-hot-toast";
 import EmailSender from "../componments/EmailSender";
-
+import { Switch } from '@headlessui/react';
 export default function ViewAllBatch(props) {
   // Helper function to get color based on grade
   function getGradeColor(grade) {
@@ -63,11 +65,104 @@ const [isEditingBatchName, setIsEditingBatchName] = useState(false);
 const [isEditingBatchCode, setIsEditingBatchCode] = useState(false);
 const [editedBatchName, setEditedBatchName] = useState(props.batch_name);
 const [editedBatchCode, setEditedBatchCode] = useState(props.batch_code);
-  
+const [profileViewStates, setProfileViewStates] = useState({}); 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
+  // Add this state with your other state declarations
+const [batchProfileView, setBatchProfileView] = useState(props.status_profile_view); 
 
+// Add this useEffect to initialize the batch profile view state
+useEffect(() => {
+  // If any student in the batch has profile_view set to true, we consider the batch to have profile_view enabled
+  if (batchData && batchData.length > 0) {
+   /*  const anyProfileEnabled = batchData.some(student => student.student_profile_view === 1); */
+    setBatchProfileView(props.status_profile_view);
+  }
+}, [batchData]);
+
+// Add this function with your other handlers
+const handleBatchProfileViewToggle = () => {
+  const newValue = !batchProfileView;
+  
+  // Optimistically update UI
+  setBatchProfileView(newValue);
+  
+  // Also update all individual toggles to match
+/*   const updatedStates = {};
+  Object.keys(profileViewStates).forEach(key => {
+    updatedStates[key] = newValue;
+  });
+  setProfileViewStates(updatedStates); */
+
+  // Make API call to update the database for the entire batch
+  axios.post(route('toggleProfileBatch'), {
+    batch_code: props.batch_code,
+    profile_view: newValue ? 1 : 0
+  })
+  .then(response => {
+    if (response.data.success) {
+      toast.success(`Batch profile visibility ${newValue ? 'enabled' : 'disabled'} for all students`);
+    } else {
+      // Revert UI change if request fails
+      setBatchProfileView(!newValue);
+      toast.error(response.data.message || 'Failed to update batch profile visibility');
+    }
+  })
+  .catch(error => {
+    console.error('Toggle batch profile view error:', error);
+    // Revert UI change
+    setBatchProfileView(!newValue);
+    toast.error('Error updating batch profile visibility');
+  });
+};
+  const handleProfileViewToggle = (studentId, currentState) => {
+    // Optimistically update UI
+    setProfileViewStates(prev => ({
+      ...prev,
+      [studentId]: !currentState
+    }));
+  
+    // Make API call to update the database
+    axios.post(route('toggleProfileView'), {
+      student_id: studentId,
+      batch_code: props.batch_code,
+      profile_view: !currentState ? 1 : 0
+    })
+    .then(response => {
+      if (response.data.success) {
+        toast.success(`Profile visibility ${!currentState ? 'enabled' : 'disabled'} for this student`);
+      } else {
+        // Revert UI change if request fails
+        setProfileViewStates(prev => ({
+          ...prev,
+          [studentId]: currentState
+        }));
+        toast.error(response.data.message || 'Failed to update profile visibility');
+      }
+    })
+    .catch(error => {
+      console.error('Toggle profile view error:', error);
+      // Revert UI change
+      setProfileViewStates(prev => ({
+        ...prev,
+        [studentId]: currentState
+      }));
+      toast.error('Error updating profile visibility');
+    });
+  };
+  
+  // Add this useEffect to initialize profileViewStates from prop data
+  useEffect(() => {
+    if (batchData && batchData.length > 0) {
+      const initialStates = {};
+      batchData.forEach(student => {
+        // Default to false if not provided
+        initialStates[student.NIC] = student.student_profile_view === 1;
+      });
+      setProfileViewStates(initialStates);
+    }
+  }, [batchData]);
   // Add this function with your other handlers 
 const handleUpdateBatchInfo = (field, value) => {
   // Show loading toast
@@ -78,7 +173,7 @@ const handleUpdateBatchInfo = (field, value) => {
   let requestData = {
     original_batch_code: props.batch_code // Always send original batch code for identification
   };
-  
+
   // Add the field to update
   if (field === 'batch_code') {
     requestData.new_batch_code = value;
@@ -494,7 +589,7 @@ const handleUpdateBatchInfo = (field, value) => {
         </h2>
       }
     >
-      <Head title="Dashboard" />
+      <Head title="Batch Results" />
 
       <div className="py-12">
       <Toaster />
@@ -647,6 +742,84 @@ const handleUpdateBatchInfo = (field, value) => {
       </div>
       <p className="text-sm font-medium">Result Status</p>
     </div>
+{/* Profile View Toggle Box (existing) */}
+<div className="bg-gradient-to-br from-pink-400 to-rose-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
+  <div className="flex items-center justify-center mb-2">
+    <MdVisibility className="text-3xl mr-2" />
+    <div className="flex flex-col items-center">
+      <p className="text-lg font-bold mb-1">Profile View</p>
+      <Switch
+        checked={batchProfileView}
+        onChange={handleBatchProfileViewToggle}
+        className={`${
+          batchProfileView ? 'bg-green-400' : 'bg-gray-300'
+        } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-rose-500`}
+      >
+        <span className="sr-only">Toggle batch profile view</span>
+        <span
+          className={`${
+            batchProfileView ? 'translate-x-6' : 'translate-x-1'
+          } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+        />
+      </Switch>
+    </div>
+  </div>
+  <p className="text-sm font-medium">Toggle For All</p>
+</div>
+
+{/* Export CSV Box (new) */}
+<div className="bg-gradient-to-br from-emerald-400 to-green-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
+  <div className="flex items-center justify-center mb-2">
+    <MdFileDownload className="text-3xl mr-2" />
+    <div className="flex flex-col items-center">
+      <p className="text-lg font-bold mb-1">Export Data</p>
+      <button
+        onClick={exportToCSV}
+        disabled={filteredStudents.length === 0}
+        title={filteredStudents.length === 0 ? "No data to export" : "Export data to CSV"}
+        className="bg-white text-green-600 font-semibold px-4 py-2 rounded-md shadow transition duration-200 hover:bg-gray-50 flex items-center"
+      >
+        <MdFileDownload className="mr-1" /> Export CSV
+      </button>
+    </div>
+  </div>
+  <p className="text-sm font-medium">Download Results</p>
+</div>
+
+{/* Add Students Box (new) */}
+<div className="bg-gradient-to-br from-blue-400 to-indigo-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
+  <div className="flex items-center justify-center mb-2">
+    <MdAdd className="text-3xl mr-2" />
+    <div className="flex flex-col items-center">
+      <p className="text-lg font-bold mb-1">Add Student</p>
+      <button
+        onClick={handleShowAddForm}
+        className="bg-white text-indigo-600 font-semibold px-4 py-2 rounded-md shadow transition duration-200 hover:bg-gray-50 flex items-center"
+      >
+        <MdAdd className="mr-1" /> New Student
+      </button>
+    </div>
+  </div>
+  <p className="text-sm font-medium">Add To Batch</p>
+</div>
+
+{/* Email Box (existing) */}
+<div className="bg-gradient-to-br from-purple-400 to-violet-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center">
+  <div className="flex items-center justify-center mb-2">
+    <MdEmail className="text-3xl mr-2" />
+    <div className="flex flex-col items-center">
+      <p className="text-lg font-bold mb-1">Send Results Email</p>
+      <button
+        onClick={toggleEmailSender}
+        className="bg-white text-purple-600 font-semibold px-4 py-2 rounded-md shadow transition duration-200 hover:bg-gray-50 flex items-center"
+      >
+        <MdEmail className="mr-1" /> Send Email
+      </button>
+    </div>
+  </div>
+  <p className="text-sm font-medium">Notify Students</p>
+</div>
+ 
   </div>
 </div>
 
@@ -671,7 +844,7 @@ const handleUpdateBatchInfo = (field, value) => {
                 )}
               </div>
               <div className="flex space-x-3">
-                <button
+              {/*   <button
                   onClick={toggleEmailSender}
                   className="flex items-center bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-md shadow transition duration-200"
                 >
@@ -690,7 +863,7 @@ const handleUpdateBatchInfo = (field, value) => {
                   className="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-md shadow transition duration-200"
                 >
                   <MdAdd className="mr-1" /> Add Student
-                </button>
+                </button> */}
               </div>
             </div>
 {/* Email Sender Component */}
@@ -823,6 +996,23 @@ const handleUpdateBatchInfo = (field, value) => {
                       </h3>
                     
                     </div>
+                    <div className="flex items-center justify-between mb-4 border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+  <span className="text-sm text-gray-600 dark:text-gray-400">Student Portal View:</span>
+  <Switch
+    checked={profileViewStates[data.NIC] || false}
+    onChange={() => handleProfileViewToggle(data.NIC, profileViewStates[data.NIC] || false)}
+    className={`${
+      profileViewStates[data.NIC] ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+  >
+    <span className="sr-only">Enable student portal view</span>
+    <span
+      className={`${
+        profileViewStates[data.NIC] ? 'translate-x-6' : 'translate-x-1'
+      } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+    />
+  </Switch>
+</div>
                     {/* Fix size for Nic */}
                     <div className="mb-4 text-gray-500 dark:text-gray-400 text-sm min-h-[60px] flex items-center">
                       <div className="w-full">

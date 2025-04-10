@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\Axios;
+use App\Http\Controllers\CSVFile;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DisplayStudent;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentProfile;
 use App\Http\Controllers\ViewResult;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -41,7 +44,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified','role:admin'])->name('viewAllBatchResult'); */
 
   
-Route::get('/upload-result', function () {
+Route::get('/admin/upload-result', function () {
     return Inertia::render('UploadResult');
 })->middleware(['auth', 'verified','role:admin'])->name('upload');
 
@@ -49,7 +52,7 @@ Route::get('/upload-result', function () {
 
 
 
-Route::get('/add-subject', function () {
+Route::get('/admin/add-subject', function () {
     return Inertia::render('AddSubject');
 })->middleware(['auth', 'verified','role:manager,admin'])->name('getsubjects');
 
@@ -67,38 +70,52 @@ Route::get('/check-result', [ViewResult::class, 'show'])->name('checkresult');
     Route::post('/send-student-result', [EmailController::class, 'sendStudentResult'])->name('sendStudentResult');
 
 Route::middleware('auth','role:admin')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy'); 
-    Route::get('/view/batch',[Axios::class,'viewAllBatchResult'])->name('viewAllBatchResult');
-    Route::get('/view/getStatistics',[Axios::class,'getStatistics'])->name('getStatistics'); 
+    Route::get('/admin/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/admin/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/admin/profile', [ProfileController::class, 'destroy'])->name('profile.destroy'); 
+    Route::get('/admin/view/batch',[Axios::class,'viewAllBatchResult'])->name('viewAllBatchResult');
+    Route::get('/admin/view/getStatistics',[Axios::class,'getStatistics'])->name('getStatistics'); 
     Route::get('/admin/email-logs', [EmailController::class, 'viewLogs'])->name('admin.email-logs.index');
     Route::get('/admin/email-logs/api', [EmailController::class, 'getLogsApi'])->name('admin.email-logs.api');
     Route::get('/admin/email-operations/{operation}/logs', [EmailController::class, 'getOperationLogs'])->name('admin.email-operations.logs');
-   
+ 
+Route::post('/admin/toggle-profile-view', [App\Http\Controllers\Axios::class, 'toggleProfileView'])->name('toggleProfileView');
+ 
+Route::post('/admin/toggle-batch-profile-view', [App\Http\Controllers\Axios::class, 'toggleProfileBatch'])->name('toggleProfileBatch');
+/* Route::post('/fetch-batch-subjects', [CSVFile::class, 'fetchBatchSubjects'])->name('fetchBatchSubjects'); */
+Route::post('/admin/search-subjects', [CSVFile::class, 'searchSubjects'])->name('searchSubjects');
 });
 
 Route::middleware('auth','role:manager,admin')->group(function () {
-        Route::get('/students', [StudentController::class, 'index'])->name('students.index');
-        Route::post('/students', [StudentController::class, 'store'])->name('students.store');
-        Route::put('/students/{student}', [StudentController::class, 'update'])->name('students.update');
-        Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
-    Route::get('/students/export', [StudentController::class, 'export'])->name('students.export');
-    Route::post('/students/email', [StudentController::class, 'email'])->name('students.email');
+        Route::get('/admin/students', [StudentController::class, 'index'])->name('students.index');
+        Route::post('/admin/students', [StudentController::class, 'store'])->name('students.store');
+        Route::put('/admin/students/{student}', [StudentController::class, 'update'])->name('students.update');
+        Route::delete('/admin/students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
+    Route::get('/admin/students/export', [StudentController::class, 'export'])->name('students.export');
+    Route::post('/admin/students/email', [StudentController::class, 'email'])->name('students.email');
      // Department Management Routes
-     Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
-     Route::post('/departments', [DepartmentController::class, 'storeDepartment'])->name('departments.store');
-     Route::put('/departments/{id}', [DepartmentController::class, 'updateDepartment'])->name('departments.update');
-     Route::delete('/departments/{id}', [DepartmentController::class, 'destroyDepartment'])->name('departments.destroy');
+     Route::get('/admin/departments', [DepartmentController::class, 'index'])->name('departments.index');
+     Route::post('/admin/departments', [DepartmentController::class, 'storeDepartment'])->name('departments.store');
+     Route::put('/admin/departments/{id}', [DepartmentController::class, 'updateDepartment'])->name('departments.update');
+     Route::delete('/admin/departments/{id}', [DepartmentController::class, 'destroyDepartment'])->name('departments.destroy');
      
      // Course Management Routes
-     Route::post('/courses', [DepartmentController::class, 'storeCourse'])->name('courses.store');
-     Route::put('/courses/{id}', [DepartmentController::class, 'updateCourse'])->name('courses.update');
-     Route::delete('/courses/{id}', [DepartmentController::class, 'destroyCourse'])->name('courses.destroy');
- 
+     Route::post('/admin/courses', [DepartmentController::class, 'storeCourse'])->name('courses.store');
+     Route::put('/admin/courses/{id}', [DepartmentController::class, 'updateCourse'])->name('courses.update');
+     Route::delete('/admin/courses/{id}', [DepartmentController::class, 'destroyCourse'])->name('courses.destroy');
    
 });
 
+Route::get('/student/login', [StudentAuthController::class, 'showLogin'])->name('student.login');
+Route::post('/student/login', [StudentAuthController::class, 'login']);
+Route::post('/student/logout', [StudentAuthController::class, 'logout'])->name('student.logout');
+
+// Protected student routes
+Route::middleware(['student.auth'])->group(function () {
+    Route::get('/student/profile', [StudentProfile::class, 'show'])->name('student.profile');
+    Route::post('/student/upload-image', [StudentProfile::class, 'uploadProfileImage'])->name('student.upload-image');
+    Route::get('/student/image/{path}', [StudentProfile::class, 'getImage'])->name('student.image')->where('path', '.*');
+});
 require __DIR__.'/auth.php';
 
  

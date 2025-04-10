@@ -128,11 +128,8 @@ export default function Dashboard(props) {
     };
 
     const searchResult = async (batch) => {
-        router.get(route('viewAllBatchResult', { batch }), {
-            onStart: () => setLoading(true),
-            onSuccess: () => setLoading(false),
-            onError: () => setLoading(false),
-        });
+        const url = route('viewAllBatchResult', { batch });
+        window.open(url, '_blank');
     };
 
     return (

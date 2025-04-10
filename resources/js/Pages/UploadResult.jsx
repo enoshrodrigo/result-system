@@ -4,6 +4,7 @@ import { Head, useForm } from "@inertiajs/react";
 import Papa from 'papaparse';
 import axios from "axios";
 import VerifyMark from "./componments/VerifyMark";
+import TemplateGenerator from "@/Components/TemplateGenerator";
 import toast, { Toaster } from "react-hot-toast";
 import { 
     MdCloudUpload, 
@@ -26,7 +27,7 @@ function UploadResult(props) {
     const [isUploading, setIsUploading] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
     const [fileSelected, setFileSelected] = useState(false);
-    
+    const [showTemplateGenerator, setShowTemplateGenerator] = useState(false);
     // State for subject verification
     const [subjectVerification, setSubjectVerification] = useState({
         isVerifying: false,
@@ -34,7 +35,10 @@ function UploadResult(props) {
         missingSubjects: [],
         verified: false
     });
-
+    const toggleTemplateGenerator = () => {
+        setShowTemplateGenerator(!showTemplateGenerator);
+      };
+      
     const handleFileUpload = async (file, course_code, batch_code, exam_name, batch_year) => {
         if (file) {
             setIsUploading(true);
@@ -214,7 +218,7 @@ function UploadResult(props) {
                 }, 2000);
             } else {
                 console.log(res.data);
-                toast.error('Failed to upload results');
+             toast.error("Error uploading results: " + res.data? res.data : res.data.message);
             }
         })
         .catch((error) => {
@@ -383,7 +387,28 @@ Jane Smith,NIC789012,A+,B,PASS</pre>
                             </div>
                         </div>
                     )}
+{/* Template Generator Toggle Button */}
+<div className="flex justify-end mb-4">
+  <button
+    onClick={toggleTemplateGenerator}
+    className="flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md shadow-md transition-all duration-200"
+  >
+    <MdFileDownload className="mr-2" />
+    Generate Template
+  </button>
+</div>
 
+{/* Template Generator Modal */}
+{showTemplateGenerator && (
+  <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div className="w-full max-w-5xl">
+      <TemplateGenerator 
+        batchCode={document.getElementById("batch_code")?.value || ""} 
+        onClose={toggleTemplateGenerator} 
+      />
+    </div>
+  </div>
+)}
                     {/* Main Form Card */}
                     <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6">

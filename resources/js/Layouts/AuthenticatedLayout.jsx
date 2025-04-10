@@ -41,6 +41,9 @@ export default function Authenticated({ auth, header, children }) {
                                 <NavLink href={route('admin.email-logs.index')}   active={route().current('admin.email-logs.index')}>
                                     Mail Logs
                                 </NavLink>
+                                <NavLink href={route('student.profile')}   active={""}>
+                                    Student Profile
+                                </NavLink>
                                 <NavLink href={route('ViewResult')} active={""}>
                                     View results
                                 </NavLink> 

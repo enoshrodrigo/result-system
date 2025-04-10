@@ -77,13 +77,13 @@ export default function Welcome(props) {
                                     <MdDashboard className="h-12 w-12 text-white" />
                                 </div>
                                 <div className="p-6 flex-grow">
-                                    <h2 className="text-xl font-semibold text-[rgb(43,111,147)] mb-2">Student Profile</h2>
-                                    <p className="text-gray-600 mb-4">Access your personal profile  </p>
+                                    <h2 className="text-xl font-semibold text-[rgb(43,111,147)] mb-2">Student Portal</h2>
+                                    <p className="text-gray-600 mb-4">Access the student portal to view your results </p>
                                     <Link
-                                        href={route('dashboard')}
+                                        href={route('student.profile')}
                                         className="inline-flex items-center text-[rgb(63,151,177)] font-medium hover:text-[rgb(43,111,157)]"
                                     >
-                                        Go to Profile <MdArrowForward className="ml-1" />
+                                        Go to Portal <MdArrowForward className="ml-1" />
                                     </Link>
                                 </div>
                             </div>
@@ -116,16 +116,17 @@ export default function Welcome(props) {
                                     <MdUpload className="h-12 w-12 text-white" />
                                 </div>
                                 <div className="p-6 flex-grow">
-                                    <h2 className="text-xl font-semibold text-[rgb(43,111,147)] mb-2">Student Portal</h2>
+                                    <h2 className="text-xl font-semibold text-[rgb(43,111,147)] mb-2">Student LMS</h2>
                                     <p className="text-gray-600 mb-4">
-                                        Access the student portal to view your results and other academic information
+                                        Access the Learning Management System (LMS) for course materials and updates 
+
                                     </p>
                                     <a
                                         href="https://lms.bci.lk"
                                         target="_blank"
                                         className="inline-flex items-center text-emerald-600 font-medium hover:text-emerald-700"
                                     >
-                                       Student Portal<MdArrowForward className="ml-1" />
+                                       Student LMS<MdArrowForward className="ml-1" />
                                     </a>
                                 </div>
                             </div>

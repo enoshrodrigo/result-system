@@ -56,11 +56,14 @@ class CSVFile extends Controller
    // Extract subjects from JSON data
    $subjectCodes = $jsonData['subject_codes'];
    $assign_short_course_subjects_id = [];
+   //if there is extra spaces in the subject code remove it(the space should be in the end of the subject word or start of the subject word)
+    $subjectCodes = array_map('trim', $subjectCodes);
 
    foreach ($subjectCodes as $subjectCode) {
     //if its status its not the subject 
      
        $subject = DB::table('subjects')->where('subject_code', '=', rtrim($subjectCode))->first();
+       
        if ($subject) {
            $assignSubject = DB::table('assign_short_course_subjects')->insertGetId([
                'course_batch_id' => $batch_id->id,
@@ -141,6 +144,7 @@ class CSVFile extends Controller
                     short_course_result_live::create([
                         'short_batch_course_id' => $batch_id->id,
                         'live' => 0,
+                        'profile_view' => 0,
                         'created_at' => now(),
                         'updated_at' => now()
                     ]);
@@ -176,10 +180,66 @@ class CSVFile extends Controller
                 // Optionally, you can return a response to the client
                 return  $e;
             }
+    } 
+    public function searchSubjects(Request $request)
+{
+    try {
+        $query = $request->input('query');
+        $batchCode = $request->input('batch_code');
+        
+        if (empty($query) || strlen($query) < 2) {
+            return response()->json(['subjects' => []]);
+        }
+        
+        // Base query for subjects
+        $subjectsQuery = DB::table('subjects')
+            ->where(function($q) use ($query) {
+                $q->where('subjects.subject_name', 'LIKE', '%' . $query . '%')
+                  ->orWhere('subjects.subject_code', 'LIKE', '%' . $query . '%');
+            })
+            ->select('subjects.id', 'subjects.subject_code', 'subjects.subject_name')
+            ->limit(20);
+        
+        // If batch code is provided, prioritize subjects from that batch
+        if (!empty($batchCode)) {
+            $batch = DB::table('batchs')->where('batch_code', $batchCode)->first();
+            
+            if ($batch) {
+                // Get subjects associated with this batch
+                $batchSubjects = DB::table('assign_short_course_subjects')
+                    ->join('subjects', 'subjects.id', '=', 'assign_short_course_subjects.short_subject_id')
+                    ->where('assign_short_course_subjects.course_batch_id', $batch->id)
+                    ->where(function($q) use ($query) {
+                        $q->where('subjects.subject_name', 'LIKE', '%' . $query . '%')
+                          ->orWhere('subjects.subject_code', 'LIKE', '%' . $query . '%');
+                    })
+                    ->select('subjects.id', 'subjects.subject_code', 'subjects.subject_name')
+                    ->get();
+                
+                // Get other subjects matching the query (excluding the ones already in batch)
+                $batchSubjectIds = $batchSubjects->pluck('id')->toArray();
+                $otherSubjects = $subjectsQuery
+                    ->whereNotIn('subjects.id', $batchSubjectIds)
+                    ->get();
+                
+                // Combine results with batch subjects first
+                $subjects = $batchSubjects->merge($otherSubjects)->take(20);
+                
+                return response()->json(['subjects' => $subjects]);
+            }
+        }
+        
+        // If no batch code or batch not found, return all matching subjects
+        $subjects = $subjectsQuery->orderBy('subjects.subject_name', 'asc')->get();
+        
+        return response()->json(['subjects' => $subjects]);
+    } catch (Exception $e) {
+        Log::error('Error searching subjects: ' . $e->getMessage());
+        return response()->json(['error' => 'Failed to search subjects'], 500);
     }
-
+}
     public function getCourse(Request $request){
-        dd("Hello");
+       
         return 0;
     }
 }
