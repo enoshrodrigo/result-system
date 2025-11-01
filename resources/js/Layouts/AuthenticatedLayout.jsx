@@ -26,7 +26,7 @@ export default function Authenticated({ auth, header, children }) {
                                     Dashboard
                                 </NavLink>
                                 <NavLink href={route('upload')} active={route().current('upload')}>
-                                   Add results
+                                   Add Results
                                 </NavLink>
                                
                                 <NavLink href={route('getsubjects')}   active={route().current('getsubjects')}>
@@ -45,7 +45,7 @@ export default function Authenticated({ auth, header, children }) {
                                     Student Profile
                                 </NavLink>
                                 <NavLink href={route('ViewResult')} active={""}>
-                                    View results
+                                    View Results
                                 </NavLink> 
                             </div>
                         </div>
